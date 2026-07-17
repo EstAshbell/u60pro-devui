@@ -4843,6 +4843,10 @@ static int build_kv(struct kv *t, const char *path)
     html_esc(s_sc_down, sizeof s_sc_down, g_sc.download);
     if (g_sc_pending_until && millis() < g_sc_pending_until)
         snprintf(s_sc_action, sizeof s_sc_action, "命令执行中…");
+    else if (g_sc_confirm == 1 && millis() < g_sc_confirm_until)
+        snprintf(s_sc_action, sizeof s_sc_action, "再次点击确认停止");
+    else if (g_sc_confirm == 2 && millis() < g_sc_confirm_until)
+        snprintf(s_sc_action, sizeof s_sc_action, "再次点击确认重启");
     else
         s_sc_action[0] = 0;
     t[i++] = (struct kv){ "SC_INSTALLED", g_sc.installed ? "已安装" : "未安装" };
