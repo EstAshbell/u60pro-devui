@@ -115,7 +115,7 @@ jobs:
             cd ui
             tar -czf ../release/ui.tar.gz -- *.html *.css subpages functions
           )
-          tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash.html'
+          tar -tzf release/ui.tar.gz | grep -qx 'subpages/shellcrash.html'
           tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash-control.sh'
 
           datad_tag=$(gh release view --repo 33333s/zwrt-datad --json tagName --jq .tagName)
@@ -143,7 +143,7 @@ jobs:
               ui: {
                 version: $ui_version,
                 asset: "ui.tar.gz",
-                notes: "ShellCrash custom function page"
+                notes: "ShellCrash built-in function page"
               }
             }' > release/version.json
           rm release/datad-version.json

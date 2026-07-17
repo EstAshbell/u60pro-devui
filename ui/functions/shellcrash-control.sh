@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ShellCrash adapter for the U60 DevUI custom function page.
+# ShellCrash adapter for the U60 DevUI built-in function page.
 # SHELLCRASH_DIR is only an override for tests; devices use /etc/ShellCrash.
 SC_DIR=${SHELLCRASH_DIR:-/etc/ShellCrash}
 SC_CFG="$SC_DIR/configs/ShellCrash.cfg"

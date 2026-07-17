@@ -63,7 +63,7 @@ static void        maybe_dump_fb(drm_disp_t *d);
 #define UI_DIR "/data/plugins/u60pro-devui/ui"
 #endif
 #define FUNCTIONS_DIR UI_DIR "/functions"
-#define SHELLCRASH_PAGE FUNCTIONS_DIR "/shellcrash.html"
+#define SHELLCRASH_PAGE UI_DIR "/subpages/shellcrash.html"
 #define SHELLCRASH_CTL FUNCTIONS_DIR "/shellcrash-control.sh"
 #define SHELLCRASH_LOG "/tmp/u60-shellcrash-action.log"
 #define UI_FONT "/usr/ui/fonts/ZTEZhengYuan.ttf"
@@ -4832,7 +4832,7 @@ static int build_kv(struct kv *t, const char *path)
     t[i++] = (struct kv){ "DHCP_POOL", g_dhcp_pool[0] ? g_dhcp_pool : s_pool };
     t[i++] = (struct kv){ "DHCP_LEASE", s_lease };
 
-    /* ShellCrash is an optional custom function page. Keep all values escaped
+    /* ShellCrash is a built-in function subpage. Keep all values escaped
      * and expose only fixed actions; the page cannot supply shell arguments. */
     static char s_sc_core[80], s_sc_mode[112], s_sc_node[360];
     static char s_sc_up[80], s_sc_down[80], s_sc_action[48];

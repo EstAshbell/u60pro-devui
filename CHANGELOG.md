@@ -6,7 +6,7 @@
 
 ### 新增
 
-- **ShellCrash 功能页**：自动识别 `/etc/ShellCrash`，显示运行状态、内核、转发模式、当前节点与 Clash API 累计流量。
+- **ShellCrash 内置功能页**：沿用现有 `02-functions.html` → `subpages/*.html` 结构，自动识别 `/etc/ShellCrash`，显示运行状态、内核、转发模式、当前节点与 Clash API 累计流量。
 - **本机服务控制**：提供启动、停止和重启白名单动作；停止与重启需要二次确认，命令异步执行且不接受页面传入的 shell 参数。
 - **统一自定义源**：GitHub Actions 自动同步上游并发布 DevUI、UI 与官方 Datad 镜像资产，管理插件只需配置一个 Release 下载基址。
 
