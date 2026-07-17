@@ -85,6 +85,12 @@ adb shell '/etc/init.d/zte_topsw_devui stop; sleep 1;
 
 插件读各项目 **latest release** 的 `version.json`，与本地记录比对，支持**单独更新** datad / devui / ui 或一键更新全部。默认更新源就是 GitHub release；如果你自己在外部做镜像，只要保持 `u60pro-devui-aarch64` / `ui.tar.gz` / `version.json` 这些文件名不变即可，本仓库不再维护单独的网盘同步流程。
 
+本 Fork 的 ShellCrash 构建会在同一个 Release 中同时提供 `u60pro-devui-aarch64`、`ui.tar.gz`、`zwrt-datad-aarch64` 和合并版 `version.json`。管理插件的自定义源填写：
+
+```text
+https://github.com/EstAshbell/u60pro-devui/releases/latest/download
+```
+
 **发版**：改 `version.json` 里对应组件的版本号（ui 改动只升 `ui`，二进制改动只升 `devui`，两边都改就两项都升）→ 用 `bash scripts/build.sh` 产出 `u60pro-devui.stripped`，发布时重命名成 `u60pro-devui-aarch64` → 重新打包**顶层平铺**的 `ui.tar.gz`（不要带 `ui/` 目录、`./` 前缀或 macOS `._*`）→ 把 `version.json`、`u60pro-devui-aarch64`、`ui.tar.gz` 一起传到 GitHub release。
 
 可直接照抄这一组命令准备 release 资产：
