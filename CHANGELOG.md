@@ -8,6 +8,7 @@
 
 - **ShellCrash 内置功能页**：沿用现有 `02-functions.html` → `subpages/*.html` 结构，只显示 `/etc/ShellCrash` 安装状态与 `CrashCore` 运行状态。
 - **本机服务控制**：只提供启动和停止两个白名单动作；停止需要二次确认，命令异步执行且不接受页面传入的 shell 参数。
+- **代理模式切换**：通过 ShellCrash 本机控制端口切换 `global`、`rule`、`direct`，页面显示为“全局 / 策略 / 直连”并高亮当前模式；端口与密钥从本机 ShellCrash 配置读取。
 - **明确返回入口**：功能页顶部提供独立的大尺寸“返回功能页”按钮。
 - **统一自定义源**：GitHub Actions 自动同步上游并发布 DevUI、UI 与官方 Datad 镜像资产，管理插件只需配置一个 Release 下载基址。
 

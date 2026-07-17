@@ -150,6 +150,7 @@ litehtml 不是浏览器，**限制比较多**，踩坑前先看这里：
 | `{{LOCKTITLE}}` | 锁屏键盘标题（设置时「设置锁屏密码」/ 解锁时「请输入锁屏密码」） | |
 | `{{PAGE}}` `{{NPAGES}}` | 当前页 / 总页数 | `3` / `5` |
 | `{{SC_INSTALLED}}` `{{SC_STATE}}` | ShellCrash 安装与运行状态 | 仅 `subpages/shellcrash.html` 使用 |
+| `{{SC_MODE_GLOBAL_CLASS}}` `{{SC_MODE_RULE_CLASS}}` `{{SC_MODE_DIRECT_CLASS}}` | ShellCrash 当前代理模式高亮类 | `seg-on` 或空字符串 |
 
 > 安全提示：`{{KEY}}`(WiFi 密码)、`{{CELLID}}`、`{{IMEI}}` **默认打码**(显示 `*`)，点对应"显示"动作才明文。请保留此行为。
 
@@ -188,6 +189,7 @@ litehtml 不是浏览器，**限制比较多**，踩坑前先看这里：
 | `act:backfunc` | 从二级页面返回顶层页 |
 | `act:sc:start` | 启动 `/etc/ShellCrash` 中的 ShellCrash 服务 |
 | `act:sc:stop` | 二次确认后停止 ShellCrash 服务 |
+| `act:scmode:global` `act:scmode:rule` `act:scmode:direct` | 通过本机 `/configs` API 切换全局 / 策略 / 直连模式 |
 | `act:neighbors` | 首页展开 / 收起邻小区列表 |
 | `act:stpage` | 打开测速二级页（只有测速后端存在时更多功能页才显示入口） |
 
