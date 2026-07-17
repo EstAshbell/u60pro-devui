@@ -98,7 +98,6 @@ jobs:
       - name: Test and build
         run: |
           set -euo pipefail
-          /bin/sh tests/test_shellcrash_control.sh
           bash scripts/build.sh
           file u60pro-devui.stripped | grep -q 'ARM aarch64'
 
@@ -113,10 +112,11 @@ jobs:
           cp CHANGELOG.md release/CHANGELOG.md
           (
             cd ui
-            tar -czf ../release/ui.tar.gz -- *.html *.css subpages functions
+            set -- *.html *.css subpages
+            [ ! -d functions ] || set -- "$@" functions
+            tar -czf ../release/ui.tar.gz -- "$@"
           )
           tar -tzf release/ui.tar.gz | grep -qx 'subpages/shellcrash.html'
-          tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash-control.sh'
 
           datad_tag=$(gh release view --repo 33333s/zwrt-datad --json tagName --jq .tagName)
           gh release download "$datad_tag" --repo 33333s/zwrt-datad \

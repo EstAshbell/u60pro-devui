@@ -64,7 +64,6 @@ static void        maybe_dump_fb(drm_disp_t *d);
 #endif
 #define FUNCTIONS_DIR UI_DIR "/functions"
 #define SHELLCRASH_PAGE UI_DIR "/subpages/shellcrash.html"
-#define SHELLCRASH_CTL FUNCTIONS_DIR "/shellcrash-control.sh"
 #define SHELLCRASH_START "/etc/ShellCrash/start.sh"
 #define SHELLCRASH_LOG "/tmp/u60-shellcrash-action.log"
 #define UI_FONT "/usr/ui/fonts/ZTEZhengYuan.ttf"
@@ -152,21 +151,15 @@ static int normalize_refresh_ms(int ms);
 struct shellcrash_state {
     int installed;
     int running;
-    int api_ok;
-    char core[32];
-    char mode[48];
-    char node[160];
-    char upload[32];
-    char download[32];
 };
 
 static struct shellcrash_state g_sc;
 static uint32_t g_sc_poll_at;
-static int g_sc_confirm;             /* 1 = stop, 2 = restart */
+static int g_sc_confirm;             /* 1 = stop */
 static uint32_t g_sc_confirm_until;
 static uint32_t g_sc_pending_until;
 static uint32_t g_sc_pending_since;
-static int g_sc_pending_action;      /* 1 = start, 2 = stop, 3 = restart */
+static int g_sc_pending_action;      /* 1 = start, 2 = stop */
 
 /* ---- page-2 aux state, cached (-1 = unknown). Like the reference plugin,
  * bands are controlled purely with `ifconfig wlanN up/down` and read back from
@@ -1240,64 +1233,19 @@ static int path_is_shellcrash(const char *path)
     return path && !strcmp(path, SHELLCRASH_PAGE);
 }
 
-static void shellcrash_copy_value(char *dst, size_t cap, const char *src)
-{
-    size_t o = 0;
-    if (!dst || cap == 0) return;
-    if (!src) src = "";
-    while (*src && o + 1 < cap) {
-        unsigned char c = (unsigned char)*src++;
-        if (c == '\r' || c == '\n' || c == '\t' || c < 0x20 || c == 0x7f) continue;
-        dst[o++] = (char)c;
-    }
-    dst[o] = 0;
-}
-
 static int shellcrash_poll(uint32_t now, int force)
 {
     struct shellcrash_state next;
-    char line[320];
-    FILE *fp;
 
     if (!force && g_sc_poll_at && now - g_sc_poll_at < 2000) return 0;
     g_sc_poll_at = now;
     memset(&next, 0, sizeof next);
-    snprintf(next.core, sizeof next.core, "-");
-    snprintf(next.mode, sizeof next.mode, "-");
-    snprintf(next.node, sizeof next.node, "-");
-    snprintf(next.upload, sizeof next.upload, "-");
-    snprintf(next.download, sizeof next.download, "-");
-
-    /* Installation and process state are safety-critical for the controls, so
-     * determine them directly. The optional helper only enriches API details. */
     next.installed = access(SHELLCRASH_START, R_OK) == 0;
     next.running = system("pidof CrashCore >/dev/null 2>&1") == 0;
 
-    fp = popen("/bin/sh " SHELLCRASH_CTL " status 2>/dev/null", "r");
-    if (fp) {
-        while (fgets(line, sizeof line, fp)) {
-            char *eq = strchr(line, '=');
-            char *v;
-            if (!eq) continue;
-            *eq = 0;
-            v = eq + 1;
-            v[strcspn(v, "\r\n")] = 0;
-            if (!strcmp(line, "INSTALLED")) next.installed = next.installed || atoi(v) == 1;
-            else if (!strcmp(line, "RUNNING")) next.running = next.running || atoi(v) == 1;
-            else if (!strcmp(line, "API")) next.api_ok = atoi(v) == 1;
-            else if (!strcmp(line, "CORE")) shellcrash_copy_value(next.core, sizeof next.core, v);
-            else if (!strcmp(line, "MODE")) shellcrash_copy_value(next.mode, sizeof next.mode, v);
-            else if (!strcmp(line, "NODE")) shellcrash_copy_value(next.node, sizeof next.node, v);
-            else if (!strcmp(line, "UPLOAD")) shellcrash_copy_value(next.upload, sizeof next.upload, v);
-            else if (!strcmp(line, "DOWNLOAD")) shellcrash_copy_value(next.download, sizeof next.download, v);
-        }
-        (void)pclose(fp);
-    }
-
     if (g_sc_pending_action && now - g_sc_pending_since >= 1000 &&
         ((g_sc_pending_action == 1 && next.running) ||
-         (g_sc_pending_action == 2 && !next.running) ||
-         (g_sc_pending_action == 3 && next.running))) {
+         (g_sc_pending_action == 2 && !next.running))) {
         g_sc_pending_action = 0;
         g_sc_pending_until = 0;
     }
@@ -1315,8 +1263,6 @@ static void shellcrash_run_action(int action, uint32_t now)
         cmd = "(/bin/sh " SHELLCRASH_START " start >" SHELLCRASH_LOG " 2>&1) &";
     else if (action == 2)
         cmd = "(/bin/sh " SHELLCRASH_START " stop >" SHELLCRASH_LOG " 2>&1) &";
-    else if (action == 3)
-        cmd = "(/bin/sh " SHELLCRASH_START " restart >" SHELLCRASH_LOG " 2>&1) &";
     if (!cmd) return;
     (void)system(cmd);
     g_sc_pending_action = action;
@@ -4838,37 +4784,19 @@ static int build_kv(struct kv *t, const char *path)
     t[i++] = (struct kv){ "DHCP_POOL", g_dhcp_pool[0] ? g_dhcp_pool : s_pool };
     t[i++] = (struct kv){ "DHCP_LEASE", s_lease };
 
-    /* ShellCrash is a built-in function subpage. Keep all values escaped
-     * and expose only fixed actions; the page cannot supply shell arguments. */
-    static char s_sc_core[80], s_sc_mode[112], s_sc_node[360];
-    static char s_sc_up[80], s_sc_down[80], s_sc_action[48];
-    html_esc(s_sc_core, sizeof s_sc_core, g_sc.core);
-    html_esc(s_sc_mode, sizeof s_sc_mode, g_sc.mode);
-    html_esc(s_sc_node, sizeof s_sc_node, g_sc.node);
-    html_esc(s_sc_up, sizeof s_sc_up, g_sc.upload);
-    html_esc(s_sc_down, sizeof s_sc_down, g_sc.download);
+    /* ShellCrash exposes only installation/process state and fixed actions. */
+    static char s_sc_action[48];
     if (g_sc_pending_until && millis() < g_sc_pending_until)
         snprintf(s_sc_action, sizeof s_sc_action, "命令执行中…");
     else if (g_sc_confirm == 1 && millis() < g_sc_confirm_until)
         snprintf(s_sc_action, sizeof s_sc_action, "再次点击确认停止");
-    else if (g_sc_confirm == 2 && millis() < g_sc_confirm_until)
-        snprintf(s_sc_action, sizeof s_sc_action, "再次点击确认重启");
     else
         s_sc_action[0] = 0;
     t[i++] = (struct kv){ "SC_INSTALLED", g_sc.installed ? "已安装" : "未安装" };
     t[i++] = (struct kv){ "SC_STATE", g_sc.running ? "运行中" : "已停止" };
-    t[i++] = (struct kv){ "SC_STATE_CLASS", g_sc.running ? "on" : "off" };
-    t[i++] = (struct kv){ "SC_API", g_sc.api_ok ? "正常" : "不可用" };
-    t[i++] = (struct kv){ "SC_CORE", s_sc_core };
-    t[i++] = (struct kv){ "SC_MODE", s_sc_mode };
-    t[i++] = (struct kv){ "SC_NODE", s_sc_node };
-    t[i++] = (struct kv){ "SC_UPLOAD", s_sc_up };
-    t[i++] = (struct kv){ "SC_DOWNLOAD", s_sc_down };
     t[i++] = (struct kv){ "SC_ACTION_STATE", s_sc_action };
     t[i++] = (struct kv){ "SC_STOP_LABEL", g_sc_confirm == 1 ? "再按一次" : "停止" };
-    t[i++] = (struct kv){ "SC_RESTART_LABEL", g_sc_confirm == 2 ? "再按一次" : "重启" };
     t[i++] = (struct kv){ "SC_STOP_CLASS", g_sc_confirm == 1 ? "seg-on" : "" };
-    t[i++] = (struct kv){ "SC_RESTART_CLASS", g_sc_confirm == 2 ? "seg-on" : "" };
 
     /* ---- lock screen (PIN pad): dots reflect typed digits. ---- */
     static char s_pindots[512], s_lockaux[140];
@@ -6264,18 +6192,6 @@ int main(void)
                                     g_sc_confirm = 1;
                                     g_sc_confirm_until = now + 4000;
                                     snprintf(g_toast, sizeof g_toast, "再次点击确认停止");
-                                    g_toast_until = now + 1800;
-                                }
-                            } else if (!strcmp(op, "restart")) {
-                                if (g_sc_confirm == 2 && now < g_sc_confirm_until) {
-                                    g_sc_confirm = 0;
-                                    shellcrash_run_action(3, now);
-                                    snprintf(g_toast, sizeof g_toast, "正在重启 ShellCrash");
-                                    g_toast_until = now + 1800;
-                                } else {
-                                    g_sc_confirm = 2;
-                                    g_sc_confirm_until = now + 4000;
-                                    snprintf(g_toast, sizeof g_toast, "再次点击确认重启");
                                     g_toast_until = now + 1800;
                                 }
                             }
