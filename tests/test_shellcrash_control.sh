@@ -77,9 +77,11 @@ assert_line 'INSTALLED=0'
 assert_line 'RUNNING=0'
 assert_line 'API=0'
 
-PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
-    /bin/sh "$ROOT/ui/functions/shellcrash-control.sh" restart
-[ "$(cat "$SC_DIR/action.log")" = restart ]
+for action in start stop restart; do
+    PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
+        /bin/sh "$ROOT/ui/functions/shellcrash-control.sh" "$action"
+    [ "$(cat "$SC_DIR/action.log")" = "$action" ]
+done
 
 if PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
     /bin/sh "$ROOT/ui/functions/shellcrash-control.sh" arbitrary 2>/dev/null; then
