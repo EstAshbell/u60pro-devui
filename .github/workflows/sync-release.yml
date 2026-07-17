@@ -78,7 +78,7 @@ jobs:
             ~/freetype-musl
             ~/litehtml
             ~/litehtml-musl
-          key: u60-aarch64-musl-v2-${{ runner.os }}
+          key: u60-aarch64-musl-v3-litehtml-0.10-${{ runner.os }}
 
       - name: Prepare toolchain and libraries
         run: |
@@ -90,7 +90,7 @@ jobs:
           fi
           if [ ! -f "$HOME/litehtml/include/litehtml.h" ]; then
             git clone https://github.com/litehtml/litehtml.git "$HOME/litehtml"
-            git -C "$HOME/litehtml" checkout d4cbcba78e408bedc5f305459e37e5c2ceef0af3
+            git -C "$HOME/litehtml" checkout 9bc84b8b8d15a4e50f18b327aa30955048b441c2
           fi
           [ -f "$HOME/freetype-musl/lib/libfreetype.a" ] || bash scripts/_build_freetype.sh
           [ -f "$HOME/litehtml-musl/lib/liblitehtml.a" ] || bash scripts/_build_litehtml.sh
