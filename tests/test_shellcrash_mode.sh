@@ -16,6 +16,7 @@ EOF
 cat >"$FAKE_BIN/curl" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >"$SHELLCRASH_DIR/curl.args"
+[ "${FAKE_PATCH_FAIL:-0}" = 1 ] && exit 22
 case "$*" in
     *'-X PATCH'*) exit 0 ;;
     *) printf '%s\n' '{"port":7890,"mode":"Rule"}' ;;
@@ -35,6 +36,12 @@ for mode in global rule direct; do
     grep -Fq -- '-X PATCH' "$SC_DIR/curl.args"
     grep -Fq -- "{\"mode\":\"$mode\"}" "$SC_DIR/curl.args"
 done
+
+if PATH="$FAKE_BIN:$PATH" FAKE_PATCH_FAIL=1 SHELLCRASH_DIR="$SC_DIR" \
+    /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" set rule >/dev/null 2>&1; then
+    echo 'failed PATCH unexpectedly succeeded' >&2
+    exit 1
+fi
 
 if PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
     /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" set arbitrary 2>/dev/null; then

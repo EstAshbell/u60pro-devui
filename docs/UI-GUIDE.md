@@ -151,6 +151,7 @@ litehtml 不是浏览器，**限制比较多**，踩坑前先看这里：
 | `{{PAGE}}` `{{NPAGES}}` | 当前页 / 总页数 | `3` / `5` |
 | `{{SC_INSTALLED}}` `{{SC_STATE}}` | ShellCrash 安装与运行状态 | 仅 `subpages/shellcrash.html` 使用 |
 | `{{SC_MODE_GLOBAL_CLASS}}` `{{SC_MODE_RULE_CLASS}}` `{{SC_MODE_DIRECT_CLASS}}` | ShellCrash 当前代理模式高亮类 | `seg-on` 或空字符串 |
+| `{{SC_START_LABEL}}/{{SC_START_CLASS}}` `{{SC_STOP_LABEL}}/{{SC_STOP_CLASS}}` `{{SC_MODE_LABEL}}` | ShellCrash 启停按钮实时状态与当前代理模式文字 | |
 
 > 安全提示：`{{KEY}}`(WiFi 密码)、`{{CELLID}}`、`{{IMEI}}` **默认打码**(显示 `*`)，点对应"显示"动作才明文。请保留此行为。
 

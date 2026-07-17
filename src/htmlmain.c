@@ -1292,15 +1292,15 @@ static int shellcrash_set_mode(const char *mode)
 {
     const char *cmd = NULL;
     if (!strcmp(mode, "global"))
-        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set global >" SHELLCRASH_MODE_LOG " 2>&1) &";
+        cmd = "/bin/sh " SHELLCRASH_MODE_CTL " set global >" SHELLCRASH_MODE_LOG " 2>&1";
     else if (!strcmp(mode, "rule"))
-        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set rule >" SHELLCRASH_MODE_LOG " 2>&1) &";
+        cmd = "/bin/sh " SHELLCRASH_MODE_CTL " set rule >" SHELLCRASH_MODE_LOG " 2>&1";
     else if (!strcmp(mode, "direct"))
-        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set direct >" SHELLCRASH_MODE_LOG " 2>&1) &";
+        cmd = "/bin/sh " SHELLCRASH_MODE_CTL " set direct >" SHELLCRASH_MODE_LOG " 2>&1";
     if (!cmd) return 0;
-    (void)system(cmd);
+    if (system(cmd) != 0) return -1;
     snprintf(g_sc.mode, sizeof g_sc.mode, "%s", mode); /* immediate visual feedback */
-    g_sc_poll_at = millis(); /* let the asynchronous PATCH settle before re-reading */
+    g_sc_poll_at = millis();
     return 1;
 }
 
@@ -4828,8 +4828,13 @@ static int build_kv(struct kv *t, const char *path)
     t[i++] = (struct kv){ "SC_INSTALLED", g_sc.installed ? "已安装" : "未安装" };
     t[i++] = (struct kv){ "SC_STATE", g_sc.running ? "运行中" : "已停止" };
     t[i++] = (struct kv){ "SC_ACTION_STATE", s_sc_action };
-    t[i++] = (struct kv){ "SC_STOP_LABEL", g_sc_confirm == 1 ? "再按一次" : "停止" };
-    t[i++] = (struct kv){ "SC_STOP_CLASS", g_sc_confirm == 1 ? "seg-on" : "" };
+    t[i++] = (struct kv){ "SC_START_LABEL", g_sc.running ? "运行中" : "启动" };
+    t[i++] = (struct kv){ "SC_START_CLASS", g_sc.running ? "state-on" : "" };
+    t[i++] = (struct kv){ "SC_STOP_LABEL", g_sc_confirm == 1 ? "确认停止" : g_sc.running ? "停止" : "已停止" };
+    t[i++] = (struct kv){ "SC_STOP_CLASS", g_sc_confirm == 1 ? "confirm-stop" : !g_sc.running ? "state-off" : "" };
+    t[i++] = (struct kv){ "SC_MODE_LABEL", !strcmp(g_sc.mode, "global") ? "全局" :
+                                            !strcmp(g_sc.mode, "rule") ? "策略" :
+                                            !strcmp(g_sc.mode, "direct") ? "直连" : "未知" };
     t[i++] = (struct kv){ "SC_MODE_GLOBAL_CLASS", !strcmp(g_sc.mode, "global") ? "seg-on" : "" };
     t[i++] = (struct kv){ "SC_MODE_RULE_CLASS", !strcmp(g_sc.mode, "rule") ? "seg-on" : "" };
     t[i++] = (struct kv){ "SC_MODE_DIRECT_CLASS", !strcmp(g_sc.mode, "direct") ? "seg-on" : "" };
@@ -6214,12 +6219,20 @@ int main(void)
                                 snprintf(g_toast, sizeof g_toast, "未找到 /etc/ShellCrash");
                                 g_toast_until = now + 1800;
                             } else if (!strcmp(op, "start")) {
-                                g_sc_confirm = 0;
-                                shellcrash_run_action(1, now);
-                                snprintf(g_toast, sizeof g_toast, "正在启动 ShellCrash");
+                                if (g_sc.running) {
+                                    snprintf(g_toast, sizeof g_toast, "ShellCrash 已在运行");
+                                } else {
+                                    g_sc_confirm = 0;
+                                    shellcrash_run_action(1, now);
+                                    snprintf(g_toast, sizeof g_toast, "正在启动 ShellCrash");
+                                }
                                 g_toast_until = now + 1800;
                             } else if (!strcmp(op, "stop")) {
-                                if (g_sc_confirm == 1 && now < g_sc_confirm_until) {
+                                if (!g_sc.running) {
+                                    g_sc_confirm = 0;
+                                    snprintf(g_toast, sizeof g_toast, "ShellCrash 已经停止");
+                                    g_toast_until = now + 1800;
+                                } else if (g_sc_confirm == 1 && now < g_sc_confirm_until) {
                                     g_sc_confirm = 0;
                                     shellcrash_run_action(2, now);
                                     snprintf(g_toast, sizeof g_toast, "正在停止 ShellCrash");
@@ -6242,11 +6255,15 @@ int main(void)
                             } else if (!g_sc.running) {
                                 snprintf(g_toast, sizeof g_toast, "请先启动 ShellCrash");
                                 g_toast_until = now + 1800;
-                            } else if (shellcrash_set_mode(mode)) {
+                            } else {
                                 const char *label = !strcmp(mode, "global") ? "全局" :
                                                     !strcmp(mode, "rule") ? "策略" : "直连";
-                                snprintf(g_toast, sizeof g_toast, "正在切换为%s模式", label);
-                                g_toast_until = now + 1800;
+                                int rc = shellcrash_set_mode(mode);
+                                if (rc > 0)
+                                    snprintf(g_toast, sizeof g_toast, "已切换为%s模式", label);
+                                else if (rc < 0)
+                                    snprintf(g_toast, sizeof g_toast, "切换失败，请检查控制 API");
+                                g_toast_until = now + 2400;
                             }
                             last_act = now;
                             need_render = 1;

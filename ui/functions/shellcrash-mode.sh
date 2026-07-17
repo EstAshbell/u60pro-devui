@@ -48,10 +48,10 @@ api_set() {
     body=$1
     if [ -n "$secret" ]; then
         curl -fsS --max-time 3 -X PATCH -H "Authorization: Bearer $secret" \
-            -H 'Content-Type: application/json' --data-binary "$body" "$api" >/dev/null 2>&1
+            -H 'Content-Type:application/json' -d "$body" "$api"
     else
-        curl -fsS --max-time 3 -X PATCH -H 'Content-Type: application/json' \
-            --data-binary "$body" "$api" >/dev/null 2>&1
+        curl -fsS --max-time 3 -X PATCH -H 'Content-Type:application/json' \
+            -d "$body" "$api"
     fi
 }
 
@@ -66,7 +66,11 @@ case "${1:-get}" in
             global|rule|direct) mode=$2 ;;
             *) echo 'mode must be global, rule, or direct' >&2; exit 2 ;;
         esac
-        api_set "{\"mode\":\"$mode\"}"
+        if ! api_set "{\"mode\":\"$mode\"}"; then
+            echo "PATCH $api failed (check db_port/secret and Clash API)" >&2
+            exit 1
+        fi
+        printf 'MODE=%s\n' "$mode"
         ;;
     *)
         echo 'usage: shellcrash-mode.sh {get|set global|set rule|set direct}' >&2
