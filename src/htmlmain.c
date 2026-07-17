@@ -64,8 +64,10 @@ static void        maybe_dump_fb(drm_disp_t *d);
 #endif
 #define FUNCTIONS_DIR UI_DIR "/functions"
 #define SHELLCRASH_PAGE UI_DIR "/subpages/shellcrash.html"
+#define SHELLCRASH_MODE_CTL FUNCTIONS_DIR "/shellcrash-mode.sh"
 #define SHELLCRASH_START "/etc/ShellCrash/start.sh"
 #define SHELLCRASH_LOG "/tmp/u60-shellcrash-action.log"
+#define SHELLCRASH_MODE_LOG "/tmp/u60-shellcrash-mode.log"
 #define UI_FONT "/usr/ui/fonts/ZTEZhengYuan.ttf"
 #define DATAD_HTTP_ADDR "127.0.0.1"
 #define DATAD_HTTP_PORT 9460
@@ -151,6 +153,7 @@ static int normalize_refresh_ms(int ms);
 struct shellcrash_state {
     int installed;
     int running;
+    char mode[12];
 };
 
 static struct shellcrash_state g_sc;
@@ -1236,12 +1239,26 @@ static int path_is_shellcrash(const char *path)
 static int shellcrash_poll(uint32_t now, int force)
 {
     struct shellcrash_state next;
+    FILE *fp;
+    char line[64];
 
     if (!force && g_sc_poll_at && now - g_sc_poll_at < 2000) return 0;
     g_sc_poll_at = now;
     memset(&next, 0, sizeof next);
     next.installed = access(SHELLCRASH_START, R_OK) == 0;
     next.running = system("pidof CrashCore >/dev/null 2>&1") == 0;
+    if (next.running) {
+        fp = popen("/bin/sh " SHELLCRASH_MODE_CTL " get 2>/dev/null", "r");
+        if (fp) {
+            if (fgets(line, sizeof line, fp) && !strncmp(line, "MODE=", 5)) {
+                char *mode = line + 5;
+                mode[strcspn(mode, "\r\n")] = 0;
+                if (!strcmp(mode, "global") || !strcmp(mode, "rule") || !strcmp(mode, "direct"))
+                    snprintf(next.mode, sizeof next.mode, "%s", mode);
+            }
+            (void)pclose(fp);
+        }
+    }
 
     if (g_sc_pending_action && now - g_sc_pending_since >= 1000 &&
         ((g_sc_pending_action == 1 && next.running) ||
@@ -1269,6 +1286,22 @@ static void shellcrash_run_action(int action, uint32_t now)
     g_sc_pending_since = now;
     g_sc_pending_until = now + 20000;
     g_sc_poll_at = 0;
+}
+
+static int shellcrash_set_mode(const char *mode)
+{
+    const char *cmd = NULL;
+    if (!strcmp(mode, "global"))
+        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set global >" SHELLCRASH_MODE_LOG " 2>&1) &";
+    else if (!strcmp(mode, "rule"))
+        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set rule >" SHELLCRASH_MODE_LOG " 2>&1) &";
+    else if (!strcmp(mode, "direct"))
+        cmd = "(/bin/sh " SHELLCRASH_MODE_CTL " set direct >" SHELLCRASH_MODE_LOG " 2>&1) &";
+    if (!cmd) return 0;
+    (void)system(cmd);
+    snprintf(g_sc.mode, sizeof g_sc.mode, "%s", mode); /* immediate visual feedback */
+    g_sc_poll_at = millis(); /* let the asynchronous PATCH settle before re-reading */
+    return 1;
 }
 
 static void function_label_from_name(char *dst, size_t cap, const char *name)
@@ -4797,6 +4830,9 @@ static int build_kv(struct kv *t, const char *path)
     t[i++] = (struct kv){ "SC_ACTION_STATE", s_sc_action };
     t[i++] = (struct kv){ "SC_STOP_LABEL", g_sc_confirm == 1 ? "再按一次" : "停止" };
     t[i++] = (struct kv){ "SC_STOP_CLASS", g_sc_confirm == 1 ? "seg-on" : "" };
+    t[i++] = (struct kv){ "SC_MODE_GLOBAL_CLASS", !strcmp(g_sc.mode, "global") ? "seg-on" : "" };
+    t[i++] = (struct kv){ "SC_MODE_RULE_CLASS", !strcmp(g_sc.mode, "rule") ? "seg-on" : "" };
+    t[i++] = (struct kv){ "SC_MODE_DIRECT_CLASS", !strcmp(g_sc.mode, "direct") ? "seg-on" : "" };
 
     /* ---- lock screen (PIN pad): dots reflect typed digits. ---- */
     static char s_pindots[512], s_lockaux[140];
@@ -6194,6 +6230,23 @@ int main(void)
                                     snprintf(g_toast, sizeof g_toast, "再次点击确认停止");
                                     g_toast_until = now + 1800;
                                 }
+                            }
+                            last_act = now;
+                            need_render = 1;
+                        }
+                        else if (!strncmp(a, "scmode:", 7)) {
+                            const char *mode = a + 7;
+                            if (!g_sc.installed) {
+                                snprintf(g_toast, sizeof g_toast, "未找到 /etc/ShellCrash");
+                                g_toast_until = now + 1800;
+                            } else if (!g_sc.running) {
+                                snprintf(g_toast, sizeof g_toast, "请先启动 ShellCrash");
+                                g_toast_until = now + 1800;
+                            } else if (shellcrash_set_mode(mode)) {
+                                const char *label = !strcmp(mode, "global") ? "全局" :
+                                                    !strcmp(mode, "rule") ? "策略" : "直连";
+                                snprintf(g_toast, sizeof g_toast, "正在切换为%s模式", label);
+                                g_toast_until = now + 1800;
                             }
                             last_act = now;
                             need_render = 1;

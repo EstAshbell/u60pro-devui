@@ -353,6 +353,14 @@ body.light .sc-back { background: #ffffff; color: #1b1d22; border: 1px solid #d6
 body.dark  .sc-btn { background: #2c2f37; color: #cfd4dc; border: 1px solid #3b414b; }
 body.light .sc-btn { background: #d3d9e2; color: #2a2f38; border: 1px solid #c2c9d2; }
 .sc-btn.seg-on { background: #2f6fe0; color: #fff; border-color: #2f6fe0; }
+.sc-mode-actions { display: block; width: 100%; margin-top: 7px; font-size: 0; white-space: nowrap; }
+.sc-mode-btn { display: inline-block; box-sizing: border-box; width: 31%; height: 42px;
+               line-height: 40px; margin-right: 3.5%; border-radius: 9px; text-align: center;
+               vertical-align: top; text-decoration: none; font-size: 15px; font-weight: 700; }
+.sc-mode-btn:last-child { margin-right: 0; }
+body.dark  .sc-mode-btn { background: #2c2f37; color: #cfd4dc; border: 1px solid #3b414b; }
+body.light .sc-mode-btn { background: #d3d9e2; color: #2a2f38; border: 1px solid #c2c9d2; }
+.sc-mode-btn.seg-on { background: #2f6fe0; color: #fff; border-color: #2f6fe0; }
 
 /* ---- bottom page dots (centered, no box) ---- */
 .dots { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; }

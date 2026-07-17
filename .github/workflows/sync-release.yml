@@ -98,6 +98,7 @@ jobs:
       - name: Test and build
         run: |
           set -euo pipefail
+          /bin/sh tests/test_shellcrash_mode.sh
           bash scripts/build.sh
           file u60pro-devui.stripped | grep -q 'ARM aarch64'
 
@@ -117,6 +118,7 @@ jobs:
             tar -czf ../release/ui.tar.gz -- "$@"
           )
           tar -tzf release/ui.tar.gz | grep -qx 'subpages/shellcrash.html'
+          tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash-mode.sh'
 
           datad_tag=$(gh release view --repo 33333s/zwrt-datad --json tagName --jq .tagName)
           gh release download "$datad_tag" --repo 33333s/zwrt-datad \
