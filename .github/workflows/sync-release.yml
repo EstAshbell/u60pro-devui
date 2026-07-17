@@ -1,0 +1,169 @@
+name: Sync upstream and publish ShellCrash build
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: shellcrash-release
+  cancel-in-progress: false
+
+jobs:
+  sync-build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync upstream
+        id: sync
+        if: github.event_name != 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git remote add upstream https://github.com/33333s/u60pro-devui.git
+          git fetch upstream main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo 'conflict=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git merge --no-edit upstream/main; then
+            git diff --name-only --diff-filter=U > /tmp/conflicts.txt
+            git merge --abort
+            echo 'conflict=true' >> "$GITHUB_OUTPUT"
+            echo "upstream_sha=$(git rev-parse upstream/main)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git push origin HEAD:main
+          echo 'conflict=false' >> "$GITHUB_OUTPUT"
+
+      - name: Report upstream conflict
+        if: steps.sync.outputs.conflict == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPSTREAM_SHA: ${{ steps.sync.outputs.upstream_sha }}
+        run: |
+          title="Upstream sync conflict: ${UPSTREAM_SHA:0:12}"
+          if ! gh issue list --state open --search "$title in:title" --json title --jq '.[].title' | grep -Fxq "$title"; then
+            {
+              echo 'Automatic upstream sync stopped because Git reported conflicts.'
+              echo
+              echo 'Conflicting files:'
+              sed 's/^/- `/' /tmp/conflicts.txt | sed 's/$/`/'
+            } >/tmp/issue.md
+            gh issue create --title "$title" --body-file /tmp/issue.md
+          fi
+
+      - name: Stop after conflict
+        if: steps.sync.outputs.conflict == 'true'
+        run: exit 1
+
+      - name: Cache cross-build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/aarch64--musl--stable-2025.08-1
+            ~/freetype
+            ~/freetype-musl
+            ~/litehtml
+            ~/litehtml-musl
+          key: u60-aarch64-musl-v2-${{ runner.os }}
+
+      - name: Prepare toolchain and libraries
+        run: |
+          set -euo pipefail
+          [ -x "$HOME/aarch64--musl--stable-2025.08-1/bin/aarch64-linux-gcc" ] || bash scripts/_setup_toolchain.sh
+          if [ ! -f "$HOME/freetype/src/base/ftbase.c" ]; then
+            git clone https://github.com/freetype/freetype.git "$HOME/freetype"
+            git -C "$HOME/freetype" checkout 42608f77f20749dd6ddc9e0536788eaad70ea4b5
+          fi
+          if [ ! -f "$HOME/litehtml/include/litehtml.h" ]; then
+            git clone https://github.com/litehtml/litehtml.git "$HOME/litehtml"
+            git -C "$HOME/litehtml" checkout d4cbcba78e408bedc5f305459e37e5c2ceef0af3
+          fi
+          [ -f "$HOME/freetype-musl/lib/libfreetype.a" ] || bash scripts/_build_freetype.sh
+          [ -f "$HOME/litehtml-musl/lib/liblitehtml.a" ] || bash scripts/_build_litehtml.sh
+
+      - name: Test and build
+        run: |
+          set -euo pipefail
+          /bin/sh tests/test_shellcrash_control.sh
+          bash scripts/build.sh
+          file u60pro-devui.stripped | grep -q 'ARM aarch64'
+
+      - name: Assemble unified release
+        id: release_meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          cp u60pro-devui.stripped release/u60pro-devui-aarch64
+          cp CHANGELOG.md release/CHANGELOG.md
+          (
+            cd ui
+            tar -czf ../release/ui.tar.gz -- *.html *.css subpages functions
+          )
+          tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash.html'
+          tar -tzf release/ui.tar.gz | grep -qx 'functions/shellcrash-control.sh'
+
+          datad_tag=$(gh release view --repo 33333s/zwrt-datad --json tagName --jq .tagName)
+          gh release download "$datad_tag" --repo 33333s/zwrt-datad \
+            --pattern zwrt-datad-aarch64 --dir release --clobber
+          gh release download "$datad_tag" --repo 33333s/zwrt-datad \
+            --pattern version.json --output release/datad-version.json --clobber
+
+          devui_hash=$(find src include scripts -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-8)
+          ui_hash=$(find ui -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-8)
+          upstream_devui=$(jq -r '.devui.version' version.json)
+          upstream_ui=$(jq -r '.ui.version' version.json)
+          jq -n \
+            --slurpfile datad release/datad-version.json \
+            --arg devui_version "${upstream_devui}-sc.${devui_hash}" \
+            --arg ui_version "${upstream_ui}-sc.${ui_hash}" \
+            '{
+              schema: 1,
+              datad: $datad[0].datad,
+              devui: {
+                version: $devui_version,
+                asset: "u60pro-devui-aarch64",
+                notes: "ShellCrash status and local service controls"
+              },
+              ui: {
+                version: $ui_version,
+                asset: "ui.tar.gz",
+                notes: "ShellCrash custom function page"
+              }
+            }' > release/version.json
+          rm release/datad-version.json
+
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern version.json \
+              --output /tmp/current-version.json --clobber >/dev/null 2>&1 &&
+             cmp -s release/version.json /tmp/current-version.json; then
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'publish=true' >> "$GITHUB_OUTPUT"
+            echo "tag=sc-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA:0:7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish latest release
+        if: steps.release_meta.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release_meta.outputs.tag }}
+        run: |
+          gh release create "$TAG" release/version.json release/u60pro-devui-aarch64 \
+            release/ui.tar.gz release/zwrt-datad-aarch64 release/CHANGELOG.md \
+            --latest --title "ShellCrash build $TAG" \
+            --notes 'Custom U60 DevUI build with local ShellCrash status and service controls.'

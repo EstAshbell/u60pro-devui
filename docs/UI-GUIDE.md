@@ -149,6 +149,9 @@ litehtml 不是浏览器，**限制比较多**，踩坑前先看这里：
 | `{{USBPWRCLASS}}/{{USBPWRSTATE}}` `{{USBNETCLASS}}/{{USBNETSTATE}}` `{{BATPCTCLASS}}/{{BATPCTSTATE}}` `{{WIFICLASS}}/{{WIFISTATE}}` `{{WIFI24CLASS}}/{{WIFI24STATE}}` `{{WIFI5CLASS}}/{{WIFI5STATE}}` `{{PSMCLASS}}/{{PSMSTATE}}` `{{DPSCLASS}}/{{DPSSTATE}}` `{{NFCCLASS}}/{{NFCSTATE}}` `{{THEMECLASS}}/{{THEMESTATE}}` `{{SPUNITCLASS}}/{{SPUNITSTATE}}` `{{LOCKCLASS}}/{{LOCKSTATE}}` | 各开关的类(`on`/`off`) 与状态文字 | `on` / `已开启` |
 | `{{LOCKTITLE}}` | 锁屏键盘标题（设置时「设置锁屏密码」/ 解锁时「请输入锁屏密码」） | |
 | `{{PAGE}}` `{{NPAGES}}` | 当前页 / 总页数 | `3` / `5` |
+| `{{SC_INSTALLED}}` `{{SC_STATE}}` `{{SC_API}}` | ShellCrash 安装、进程与本机控制 API 状态 | 仅 `functions/shellcrash.html` 使用 |
+| `{{SC_CORE}}` `{{SC_MODE}}` `{{SC_NODE}}` | ShellCrash 内核、转发模式与当前节点 | |
+| `{{SC_UPLOAD}}` `{{SC_DOWNLOAD}}` | Clash API 连接累计流量 | |
 
 > 安全提示：`{{KEY}}`(WiFi 密码)、`{{CELLID}}`、`{{IMEI}}` **默认打码**(显示 `*`)，点对应"显示"动作才明文。请保留此行为。
 
@@ -185,6 +188,8 @@ litehtml 不是浏览器，**限制比较多**，踩坑前先看这里：
 | `act:sub:<html>` | 打开 `ui/subpages/` 下的内置二级页面 |
 | `act:func:<html>` | 打开 `ui/functions/` 下的自定义二级页面 |
 | `act:backfunc` | 从二级页面返回顶层页 |
+| `act:sc:start` | 启动 `/etc/ShellCrash` 中的 ShellCrash 服务 |
+| `act:sc:stop` `act:sc:restart` | 二次确认后停止 / 重启 ShellCrash 服务 |
 | `act:neighbors` | 首页展开 / 收起邻小区列表 |
 | `act:stpage` | 打开测速二级页（只有测速后端存在时更多功能页才显示入口） |
 

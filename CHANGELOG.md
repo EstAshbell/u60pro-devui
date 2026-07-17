@@ -2,6 +2,19 @@
 
 > 当前正式命名与安装路径已经统一为：`zwrt-datad`、`/data/plugins/zwrt-datad/zwrt-datad`、`/data/plugins/u60pro-devui/`、`/data/plugins/u60pro-devui/ui`。历史条目里如果出现 `u60-datad`、`/data/u60pro` 或 `/data/ui`，表示当时版本记录。
 
+## ShellCrash custom build
+
+### 新增
+
+- **ShellCrash 功能页**：自动识别 `/etc/ShellCrash`，显示运行状态、内核、转发模式、当前节点与 Clash API 累计流量。
+- **本机服务控制**：提供启动、停止和重启白名单动作；停止与重启需要二次确认，命令异步执行且不接受页面传入的 shell 参数。
+- **统一自定义源**：GitHub Actions 自动同步上游并发布 DevUI、UI 与官方 Datad 镜像资产，管理插件只需配置一个 Release 下载基址。
+
+### 验证
+
+- ShellCrash 控制适配器包含模拟配置/API测试，并拒绝未列入白名单的动作。
+- 自动发布流程检查 AArch64 ELF、UI 包目录结构以及合并版 `version.json`。
+
 ## v1.2.12 - 2026-07-15
 
 ### 修复

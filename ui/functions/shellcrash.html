@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>ShellCrash</title>
+</head>
+<body>
+  <div class="card">
+    <div class="title">ShellCrash <span class="r muted">{{SC_STATE}}</span></div>
+    <table>
+      <tr><td class="kv-l">安装状态</td><td class="val">{{SC_INSTALLED}}</td></tr>
+      <tr><td class="kv-l">控制 API</td><td class="val">{{SC_API}}</td></tr>
+      <tr><td class="kv-l">运行内核</td><td class="val">{{SC_CORE}}</td></tr>
+      <tr><td class="kv-l">转发模式</td><td class="val">{{SC_MODE}}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="title">当前代理</div>
+    <table>
+      <tr><td class="kv-l">当前节点</td><td class="val sm">{{SC_NODE}}</td></tr>
+      <tr><td class="kv-l">累计上传</td><td class="val">{{SC_UPLOAD}}</td></tr>
+      <tr><td class="kv-l">累计下载</td><td class="val">{{SC_DOWNLOAD}}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="title">服务控制 <span class="r muted">{{SC_ACTION_STATE}}</span></div>
+    <div class="seg">
+      <a href="act:sc:start" class="segc">启动</a>
+      <a href="act:sc:stop" class="segc {{SC_STOP_CLASS}}">{{SC_STOP_LABEL}}</a>
+      <a href="act:sc:restart" class="segc {{SC_RESTART_CLASS}}">{{SC_RESTART_LABEL}}</a>
+    </div>
+    <p class="func-note">停止和重启需要连续确认；操作期间网络可能短暂中断。</p>
+  </div>
+</body>
+</html>
