@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>ShellCrash</title>
-</head>
-<body>
+<head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
+<body class="{{THEME}}">
+  {{STATUSBAR}}
+  <div class="subtop">
+    <a href="act:backfunc" class="subback">返回</a>
+    <span class="subname">ShellCrash</span>
+  </div>
+
   <div class="card">
-    <div class="title">ShellCrash <span class="r muted">{{SC_STATE}}</span></div>
+    <div class="title">运行状态 <span class="r muted">{{SC_STATE}}</span></div>
     <table>
       <tr><td class="kv-l">安装状态</td><td class="val">{{SC_INSTALLED}}</td></tr>
       <tr><td class="kv-l">控制 API</td><td class="val">{{SC_API}}</td></tr>
@@ -33,5 +36,7 @@
     </div>
     <p class="func-note">停止和重启需要连续确认；操作期间网络可能短暂中断。</p>
   </div>
+
+  <div class="pgpad"></div>
 </body>
 </html>
