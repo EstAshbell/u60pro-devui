@@ -65,6 +65,7 @@ static void        maybe_dump_fb(drm_disp_t *d);
 #define FUNCTIONS_DIR UI_DIR "/functions"
 #define SHELLCRASH_PAGE UI_DIR "/subpages/shellcrash.html"
 #define SHELLCRASH_CTL FUNCTIONS_DIR "/shellcrash-control.sh"
+#define SHELLCRASH_START "/etc/ShellCrash/start.sh"
 #define SHELLCRASH_LOG "/tmp/u60-shellcrash-action.log"
 #define UI_FONT "/usr/ui/fonts/ZTEZhengYuan.ttf"
 #define DATAD_HTTP_ADDR "127.0.0.1"
@@ -1267,6 +1268,11 @@ static int shellcrash_poll(uint32_t now, int force)
     snprintf(next.upload, sizeof next.upload, "-");
     snprintf(next.download, sizeof next.download, "-");
 
+    /* Installation and process state are safety-critical for the controls, so
+     * determine them directly. The optional helper only enriches API details. */
+    next.installed = access(SHELLCRASH_START, R_OK) == 0;
+    next.running = system("pidof CrashCore >/dev/null 2>&1") == 0;
+
     fp = popen("/bin/sh " SHELLCRASH_CTL " status 2>/dev/null", "r");
     if (fp) {
         while (fgets(line, sizeof line, fp)) {
@@ -1276,8 +1282,8 @@ static int shellcrash_poll(uint32_t now, int force)
             *eq = 0;
             v = eq + 1;
             v[strcspn(v, "\r\n")] = 0;
-            if (!strcmp(line, "INSTALLED")) next.installed = atoi(v) == 1;
-            else if (!strcmp(line, "RUNNING")) next.running = atoi(v) == 1;
+            if (!strcmp(line, "INSTALLED")) next.installed = next.installed || atoi(v) == 1;
+            else if (!strcmp(line, "RUNNING")) next.running = next.running || atoi(v) == 1;
             else if (!strcmp(line, "API")) next.api_ok = atoi(v) == 1;
             else if (!strcmp(line, "CORE")) shellcrash_copy_value(next.core, sizeof next.core, v);
             else if (!strcmp(line, "MODE")) shellcrash_copy_value(next.mode, sizeof next.mode, v);
@@ -1306,11 +1312,11 @@ static void shellcrash_run_action(int action, uint32_t now)
 {
     const char *cmd = NULL;
     if (action == 1)
-        cmd = "(/bin/sh " SHELLCRASH_CTL " start >" SHELLCRASH_LOG " 2>&1) &";
+        cmd = "(/bin/sh " SHELLCRASH_START " start >" SHELLCRASH_LOG " 2>&1) &";
     else if (action == 2)
-        cmd = "(/bin/sh " SHELLCRASH_CTL " stop >" SHELLCRASH_LOG " 2>&1) &";
+        cmd = "(/bin/sh " SHELLCRASH_START " stop >" SHELLCRASH_LOG " 2>&1) &";
     else if (action == 3)
-        cmd = "(/bin/sh " SHELLCRASH_CTL " restart >" SHELLCRASH_LOG " 2>&1) &";
+        cmd = "(/bin/sh " SHELLCRASH_START " restart >" SHELLCRASH_LOG " 2>&1) &";
     if (!cmd) return;
     (void)system(cmd);
     g_sc_pending_action = action;
