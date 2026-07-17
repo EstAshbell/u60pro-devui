@@ -16,14 +16,14 @@
   <div class="card">
     <div class="title">服务控制 <span class="r muted">{{SC_ACTION_STATE}}</span></div>
     <div class="sc-actions">
-      <a href="act:sc:start" class="sc-btn">启动</a>
+      <a href="act:sc:start" class="sc-btn {{SC_START_CLASS}}">{{SC_START_LABEL}}</a>
       <a href="act:sc:stop" class="sc-btn {{SC_STOP_CLASS}}">{{SC_STOP_LABEL}}</a>
     </div>
     <p class="func-note">停止需要连续确认；操作期间网络可能短暂中断。</p>
   </div>
 
   <div class="card">
-    <div class="title">代理模式</div>
+    <div class="title">代理模式 <span class="r muted">当前：{{SC_MODE_LABEL}}</span></div>
     <div class="sc-mode-actions">
       <a href="act:scmode:global" class="sc-mode-btn {{SC_MODE_GLOBAL_CLASS}}">全局</a>
       <a href="act:scmode:rule" class="sc-mode-btn {{SC_MODE_RULE_CLASS}}">策略</a>
