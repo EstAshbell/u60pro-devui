@@ -64,7 +64,7 @@ static void        maybe_dump_fb(drm_disp_t *d);
 #endif
 #define FUNCTIONS_DIR UI_DIR "/functions"
 #define SHELLCRASH_PAGE UI_DIR "/subpages/shellcrash.html"
-#define SHELLCRASH_MODE_CTL FUNCTIONS_DIR "/shellcrash-mode.sh"
+#define SHELLCRASH_MODE_CTL UI_DIR "/subpages/shellcrash-mode.sh"
 #define SHELLCRASH_START "/etc/ShellCrash/start.sh"
 #define SHELLCRASH_LOG "/tmp/u60-shellcrash-action.log"
 #define SHELLCRASH_MODE_LOG "/tmp/u60-shellcrash-mode.log"
@@ -4833,7 +4833,7 @@ static int build_kv(struct kv *t, const char *path)
     t[i++] = (struct kv){ "SC_STOP_LABEL", g_sc_confirm == 1 ? "确认停止" : g_sc.running ? "停止" : "已停止" };
     t[i++] = (struct kv){ "SC_STOP_CLASS", g_sc_confirm == 1 ? "confirm-stop" : !g_sc.running ? "state-off" : "" };
     t[i++] = (struct kv){ "SC_MODE_LABEL", !strcmp(g_sc.mode, "global") ? "全局" :
-                                            !strcmp(g_sc.mode, "rule") ? "策略" :
+                                            !strcmp(g_sc.mode, "rule") ? "规则" :
                                             !strcmp(g_sc.mode, "direct") ? "直连" : "未知" };
     t[i++] = (struct kv){ "SC_MODE_GLOBAL_CLASS", !strcmp(g_sc.mode, "global") ? "seg-on" : "" };
     t[i++] = (struct kv){ "SC_MODE_RULE_CLASS", !strcmp(g_sc.mode, "rule") ? "seg-on" : "" };
@@ -6257,7 +6257,7 @@ int main(void)
                                 g_toast_until = now + 1800;
                             } else {
                                 const char *label = !strcmp(mode, "global") ? "全局" :
-                                                    !strcmp(mode, "rule") ? "策略" : "直连";
+                                                    !strcmp(mode, "rule") ? "规则" : "直连";
                                 int rc = shellcrash_set_mode(mode);
                                 if (rc > 0)
                                     snprintf(g_toast, sizeof g_toast, "已切换为%s模式", label);

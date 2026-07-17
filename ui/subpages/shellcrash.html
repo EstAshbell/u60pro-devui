@@ -3,7 +3,10 @@
 <head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
 <body class="{{THEME}}">
   {{STATUSBAR}}
-  <a href="act:backfunc" class="sc-back">← 返回功能页</a>
+  <div class="subtop">
+    <a href="act:backfunc" class="subback">返回</a>
+    <span class="subname">ShellCrash</span>
+  </div>
 
   <div class="card">
     <div class="title">ShellCrash 状态</div>
@@ -26,7 +29,7 @@
     <div class="title">代理模式 <span class="r muted">当前：{{SC_MODE_LABEL}}</span></div>
     <div class="sc-mode-actions">
       <a href="act:scmode:global" class="sc-mode-btn {{SC_MODE_GLOBAL_CLASS}}">全局</a>
-      <a href="act:scmode:rule" class="sc-mode-btn {{SC_MODE_RULE_CLASS}}">策略</a>
+      <a href="act:scmode:rule" class="sc-mode-btn {{SC_MODE_RULE_CLASS}}">规则</a>
       <a href="act:scmode:direct" class="sc-mode-btn {{SC_MODE_DIRECT_CLASS}}">直连</a>
     </div>
   </div>

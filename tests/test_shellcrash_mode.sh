@@ -25,26 +25,26 @@ EOF
 chmod +x "$FAKE_BIN/curl"
 
 OUT=$(PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
-    /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" get)
+    /bin/sh "$ROOT/ui/subpages/shellcrash-mode.sh" get)
 [ "$OUT" = 'MODE=rule' ]
 grep -Fq 'Authorization: Bearer test secret' "$SC_DIR/curl.args"
 grep -Fq 'http://127.0.0.1:9999/configs' "$SC_DIR/curl.args"
 
 for mode in global rule direct; do
     PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
-        /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" set "$mode"
+        /bin/sh "$ROOT/ui/subpages/shellcrash-mode.sh" set "$mode"
     grep -Fq -- '-X PATCH' "$SC_DIR/curl.args"
     grep -Fq -- "{\"mode\":\"$mode\"}" "$SC_DIR/curl.args"
 done
 
 if PATH="$FAKE_BIN:$PATH" FAKE_PATCH_FAIL=1 SHELLCRASH_DIR="$SC_DIR" \
-    /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" set rule >/dev/null 2>&1; then
+    /bin/sh "$ROOT/ui/subpages/shellcrash-mode.sh" set rule >/dev/null 2>&1; then
     echo 'failed PATCH unexpectedly succeeded' >&2
     exit 1
 fi
 
 if PATH="$FAKE_BIN:$PATH" SHELLCRASH_DIR="$SC_DIR" \
-    /bin/sh "$ROOT/ui/functions/shellcrash-mode.sh" set arbitrary 2>/dev/null; then
+    /bin/sh "$ROOT/ui/subpages/shellcrash-mode.sh" set arbitrary 2>/dev/null; then
     echo 'arbitrary mode unexpectedly succeeded' >&2
     exit 1
 fi
