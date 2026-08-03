@@ -167,5 +167,6 @@ jobs:
         run: |
           gh release create "$TAG" release/version.json release/u60pro-devui-aarch64 \
             release/ui.tar.gz release/zwrt-datad-aarch64 release/CHANGELOG.md \
+            --repo "$GITHUB_REPOSITORY" \
             --latest --title "ShellCrash build $TAG" \
             --notes 'Custom U60 DevUI build with local ShellCrash status and service controls.'
