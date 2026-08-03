@@ -164,8 +164,8 @@ static uint32_t g_sc_pending_until;
 static uint32_t g_sc_pending_since;
 static int g_sc_pending_action;      /* 1 = start, 2 = stop */
 
-/* ---- page-2 aux state, cached (-1 = unknown). Like the reference plugin,
- * bands are controlled purely with `ifconfig wlanN up/down` and read back from
+/* ---- page-2 aux state, cached (-1 = unknown). Bands use hostapd-aware BSS
+ * disable/enable around `ifconfig wlanN down/up` and are read back from
  * operstate (wlan0=main 2.4G, wlan2=main 5G); uci/`wifi reload`/`zwrt_wlan
  * reload` are NOT used (they don't work / wedge the radios). PSM = `iw
  * power_save`, persisted via a self-written /etc/hotplug.d/iface/99-disable-powersave
@@ -187,6 +187,49 @@ static char g_dhcp_pool[48];
  * station dump) to match the vendor's "only connected" behavior. */
 static char g_assoc_macs[640];
 static uint32_t g_wifi_aux_at;
+
+/* Toggle one or more AP interfaces while keeping hostapd's BSS lifecycle in
+ * sync with the netdev state.  A bare `ifconfig down/up` can leave the vendor
+ * driver beaconing again without reinstalling the WPA state after a long radio
+ * sleep, which clients misleadingly report as a wrong password.  Prefer the
+ * hostapd control socket; older/minimal images fall back to a daemon reload.
+ * `ifaces` is always one of the hard-coded interface lists at the call sites. */
+static void wifi_interfaces_set_async(const char *ifaces, int enable)
+{
+    char cmd[1600];
+    if (!ifaces || !ifaces[0]) return;
+
+    if (enable) {
+        snprintf(cmd, sizeof cmd,
+            "(echo action=up ifaces='%s'; "
+            "have_cli=0; command -v hostapd_cli >/dev/null 2>&1 && have_cli=1; "
+            "if [ \"$have_cli\" = 1 ]; then "
+            "for w in %s; do echo hostapd-disable-before-up=$w; "
+            "hostapd_cli -i \"$w\" disable 2>&1 || true; done; fi; "
+            "for w in %s; do echo ifconfig-up=$w; ifconfig \"$w\" up || true; done; "
+            "sleep 1; cli_ok=0; "
+            "if [ \"$have_cli\" = 1 ]; then cli_ok=1; "
+            "for w in %s; do echo hostapd-enable=$w; "
+            "out=$(hostapd_cli -i \"$w\" enable 2>&1); echo \"$out\"; "
+            "echo \"$out\" | grep -q '^OK$' || cli_ok=0; done; fi; "
+            "if [ \"$cli_ok\" != 1 ]; then echo hostapd-hup-fallback; "
+            "killall -HUP hostapd 2>/dev/null || killall -HUP wpad 2>/dev/null || true; fi; "
+            "sleep 1; for w in %s; do "
+            "echo operstate-$w=$(cat /sys/class/net/$w/operstate 2>/dev/null); done) "
+            ">/tmp/u60-wifi-toggle.log 2>&1 &",
+            ifaces, ifaces, ifaces, ifaces, ifaces);
+    } else {
+        snprintf(cmd, sizeof cmd,
+            "(echo action=down ifaces='%s'; "
+            "if command -v hostapd_cli >/dev/null 2>&1; then "
+            "for w in %s; do echo hostapd-disable=$w; "
+            "hostapd_cli -i \"$w\" disable 2>&1 || true; done; fi; "
+            "for w in %s; do echo ifconfig-down=$w; ifconfig \"$w\" down || true; done) "
+            ">/tmp/u60-wifi-toggle.log 2>&1 &",
+            ifaces, ifaces, ifaces);
+    }
+    system(cmd);
+}
 
 /* Is this MAC currently associated to a radio? (case-insensitive substring) */
 static int mac_assoc(const char *mac)
@@ -6296,21 +6339,14 @@ int main(void)
                         }
                         else if (!strcmp(a, "wifi")) {   /* master: both main bands (wlan0+wlan2) */
                             int on = (g_w24 == 1 || g_w5 == 1);
-                            const char *ic = on ? "down" : "up";
-                            char cmd[160];
-                            snprintf(cmd, sizeof cmd,
-                                "(ifconfig wlan0 %s; ifconfig wlan2 %s) >/dev/null 2>&1 &", ic, ic);
-                            system(cmd);
+                            wifi_interfaces_set_async("wlan0 wlan2", !on);
                             g_w24 = g_w5 = !on;
                             need_render = 1;
                         }
                         else if (!strcmp(a, "wifi24") || !strcmp(a, "wifi5")) {
                             int is24 = !strcmp(a, "wifi24");
                             int on = (is24 ? g_w24 : g_w5) == 1;
-                            char cmd[120];
-                            snprintf(cmd, sizeof cmd, "ifconfig %s %s >/dev/null 2>&1 &",
-                                     is24 ? "wlan0" : "wlan2", on ? "down" : "up");
-                            system(cmd);
+                            wifi_interfaces_set_async(is24 ? "wlan0" : "wlan2", !on);
                             if (is24) g_w24 = !on; else g_w5 = !on;
                             need_render = 1;
                         }

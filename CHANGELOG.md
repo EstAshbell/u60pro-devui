@@ -14,6 +14,10 @@
 - **统一返回入口**：ShellCrash 页使用与 WiFi、短信等二级页面相同的“返回 + 页面标题”顶栏。
 - **统一自定义源**：GitHub Actions 自动同步上游并发布 DevUI、UI 与官方 Datad 镜像资产，管理插件只需配置一个 Release 下载基址。
 
+### 修复
+
+- **WiFi 长时间关闭后重开提示密码错误**：总开关与单频段开关不再只执行裸 `ifconfig down/up`；关闭/恢复时同步 hostapd BSS 生命周期并重新安装 WPA 状态，control socket 不可用时回退重载 hostapd/wpad。最近一次切换结果写入 `/tmp/u60-wifi-toggle.log`，便于实机诊断且不记录密码。
+
 ### 验证
 
 - 自动发布流程检查 AArch64 ELF、UI 包目录结构以及合并版 `version.json`。
