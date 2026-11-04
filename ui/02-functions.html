@@ -1,36 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
-<body class="{{THEME}}">
+<body class="{{THEME}} hub">
   {{STATUSBAR}}
-
-  <div class="func-grid">
-    <a href="act:sub:wifi.html" class="func-tile ft-wifi">
-      <span class="func-name">WiFi</span>
-      <span class="func-desc">分享信息和开关控制</span>
+  <div class="pagehead"><span class="pagebrand">Ashbell</span><span class="pagename">控制中心</span></div>
+  <div class="hub-pair">
+    <a href="act:sub:clients.html" class="hub-feature hub-icon-card">
+      <span class="ui-ico ico-clients hub-icon"><i></i><em></em><b></b></span>
+      <span class="hub-feature-label">连接设备</span>
+      <span class="hub-feature-value">{{CLIENTS}} 台</span>
+      <span class="hub-feature-desc">查看连接详情 ></span>
     </a>
-    <a href="act:sub:sms.html" class="func-tile ft-sms">
-      <span class="func-name">短信</span>
-      <span class="func-desc">查看设备短信列表</span>
+    <a href="act:func:sim-traffic.html" class="hub-feature hub-icon-card">
+      <span class="ui-ico ico-flow hub-icon"><i></i><em></em><b></b></span>
+      <span class="hub-feature-label">下载流量</span>
+      <span class="hub-feature-value">{{RXBYTES}}</span>
+      <span class="hub-feature-desc">分卡统计与套餐 ></span>
     </a>
-    <a href="act:sub:cell.html" class="func-tile ft-signal">
-      <span class="func-name">信令读取</span>
-      <span class="func-desc">查看机内解析缓存</span>
-    </a>
-    <a href="act:sub:lock.html" class="func-tile ft-lock">
-      <span class="func-name">锁频</span>
-      <span class="func-desc">选网方式和频段锁定</span>
-    </a>
-    <a href="act:sub:shellcrash.html" class="func-tile ft-shellcrash">
-      <span class="func-name">ShellCrash</span>
-      <span class="func-desc">查看代理状态和服务控制</span>
-    </a>
-    {{STFUNCTIONTILE}}
-    {{CUSTOMFUNCTIONTILES}}
   </div>
-
+  <a href="act:sub:shellcrash.html" class="hub-row hub-row-icon hub-proxy">
+    <span class="ui-ico ico-proxy"><i></i><em></em><b></b></span>
+    <span class="hub-row-title">ShellCrash</span><span class="hub-row-right">启停 · 模式 ></span>
+  </a>
+  <a href="act:sub:sms.html" class="hub-row hub-row-icon">
+    <span class="ui-ico ico-sms"><i></i><em></em><b></b></span>
+    <span class="hub-row-title">短信</span><span class="hub-row-right">查看消息 ></span>
+  </a>
+  <a href="act:sub:advanced.html" class="hub-row hub-row-icon">
+    <span class="ui-ico ico-advanced"><i></i><em></em><b></b></span>
+    <span class="hub-row-title">高级工具</span><span class="hub-row-right">双卡 · VPN ></span>
+  </a>
+  <a href="act:sub:settings.html" class="hub-row hub-row-icon">
+    <span class="ui-ico ico-settings"><i></i><em></em><b></b></span>
+    <span class="hub-row-title">全部设置</span><span class="hub-row-right">网络 · 供电 ></span>
+  </a>
+  <div class="hub-note">从顶部下滑可快速切换常用功能。</div>
   {{TOAST}}
-  <div class="pgpad"></div>
   {{DOTS}}
 </body>
 </html>

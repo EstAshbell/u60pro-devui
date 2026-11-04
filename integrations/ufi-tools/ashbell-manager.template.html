@@ -1,0 +1,226 @@
+<!-- [KANO_PLUGIN_START] Ashbell桌面管理 -->
+<!-- [KANO_META] sid=Ashbell桌面管理.html;v=1.1.2 -->
+<script>
+(() => {
+  'use strict';
+  if (window.__ashbellDesktopManager) return;
+  window.__ashbellDesktopManager = true;
+  const managerBase64 = '__ASHBELL_MANAGER_BASE64__';
+  const defaultPackage = '/data/plugins/.ashbell-devui/ashbell-devui.tar.gz';
+  const quote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+  const node = (tag, text) => { const el = document.createElement(tag); if (text) el.textContent = text; return el; };
+
+  async function root(command, timeout = 240000) {
+    const base = typeof KANO_baseURL !== 'undefined' && KANO_baseURL ? KANO_baseURL : '/api';
+    const headers = { 'Content-Type': 'application/json' };
+    if (typeof common_headers !== 'undefined' && common_headers) Object.assign(headers, common_headers);
+    headers['Content-Type'] = 'application/json';
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout + 5000);
+    try {
+      const response = await fetch(base + '/run_shell', {
+        method: 'POST', credentials: 'same-origin', headers, signal: controller.signal,
+        body: JSON.stringify({ cmd: command, timeout })
+      });
+      if (!response.ok) throw new Error(response.status === 401 ? '请先登录 UFI-TOOLS 身份口令。' : 'HTTP ' + response.status);
+      const result = await response.json();
+      const output = typeof result.content === 'string' ? result.content : JSON.stringify(result.content || result.error || '');
+      const receipt = output.match(/(?:^|\n)__ASHBELL_RC__=([0-9]+)\s*$/);
+      if (!result.success || !receipt) throw new Error(output || '未收到终态回执，不能确认完成；请先检查状态。');
+      return { ok: receipt[1] === '0', text: output.replace(/\n?__ASHBELL_RC__=[0-9]+\s*$/, '') };
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('请求超时，任务状态未知。请检查设备状态和备份后再操作。');
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+
+  function command(action, source) {
+    let args = action;
+    let env = '';
+    if (action === 'install' || action === 'update') {
+      const value = source.trim();
+      if (value.startsWith('https://')) {
+        const url = new URL(value);
+        if (url.username || url.password || url.search || url.hash) throw new Error('发布源请填写不含口令、查询参数的 HTTPS release 下载目录。');
+        env = 'ASHBELL_RELEASE_URL=' + quote(value.replace(/\/+$/, '')) + ' ';
+      } else {
+        if (!/^\/(data|tmp)\/[A-Za-z0-9_./-]+$/.test(value) || value.split('/').includes('..')) throw new Error('请填写设备上的 /data/…/ashbell-devui.tar.gz 路径，或 HTTPS release 下载目录。');
+        args += ' ' + quote(value);
+      }
+    }
+    if (action === 'validate') args += ' ' + quote(source);
+    return 'f=/tmp/ashbell-devui-manager-$$.sh\n' +
+      'printf %s ' + quote(managerBase64) + ' | base64 -d > "$f"\n' +
+      'if [ -s "$f" ]; then ' + env + 'sh "$f" ' + args + '; rc=$?; else rc=1; fi\n' +
+      'rm -f "$f"\nprintf "\\n__ASHBELL_RC__=%s\\n" "$rc"\n';
+  }
+
+  function receipt(script) {
+    return 'sh -c ' + quote(script) + '\nrc=$?\nprintf "\\n__ASHBELL_RC__=%s\\n" "$rc"\n';
+  }
+
+  async function uploadPackage(file, progress) {
+    if (!file || !/\.tar\.gz$/i.test(file.name)) throw new Error('请选择完整的 .tar.gz 离线安装包。');
+    if (file.size < 1 || file.size > 20 * 1024 * 1024) throw new Error('离线包大小须在 1 字节至 20 MiB 之间。');
+    const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    const state = '/data/plugins/.ashbell-devui';
+    const temporary = state + '/.upload-' + id + '.tar.gz';
+    const lock = state + '/upload.lock';
+    const guard = 'test "$(cat ' + quote(lock + '/id') + ' 2>/dev/null)" = ' + quote(id) + ' || { echo "上传会话已失效，请重新选择文件。" >&2; exit 1; }\n';
+    const checked = async script => {
+      const result = await root(receipt(script), 30000);
+      if (!result.ok) throw new Error(result.text || '设备未确认上传步骤完成。');
+      return result;
+    };
+    let committed = false;
+    let commitAttempted = false;
+    try {
+      progress('准备上传 ' + file.name + '…');
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (bytes.length !== file.size) throw new Error('读取的本地文件长度不符，请重新选择文件。');
+      await checked('set -eu\nstate=' + quote(state) + '\nlock=' + quote(lock) + '\n' +
+        'mkdir -p "$state"\nchmod 700 "$state"\n' +
+        // A ten-minute lease also allows recovery after a browser tab was closed.
+        'if [ -d "$lock" ]; then\n' +
+        '  stamp=$(cat "$lock/updated" 2>/dev/null || true)\n' +
+        '  case "$stamp" in \'\'|*[!0-9]*) ;; *)\n' +
+        '    now=$(date +%s)\n' +
+        '    if [ "$((now-stamp))" -gt 600 ] && mkdir "$state/upload-reclaim.lock" 2>/dev/null; then\n' +
+        '      latest=$(cat "$lock/updated" 2>/dev/null || true)\n' +
+        '      if [ "$latest" = "$stamp" ]; then rm -f "$lock/id" "$lock/updated"; rmdir "$lock" 2>/dev/null || true; fi\n' +
+        '      rmdir "$state/upload-reclaim.lock" 2>/dev/null || true\n' +
+        '    fi ;; esac\nfi\n' +
+        'mkdir "$lock" 2>/dev/null || { echo "另一个离线包正在上传，请稍后再试。" >&2; exit 1; }\n' +
+        'printf %s ' + quote(id) + ' > "$lock/id"\ndate +%s > "$lock/updated"\n' +
+        'free=$(df -Pk "$state" | awk \'END {print $4}\')\n' +
+        '[ "$free" -ge ' + (Math.ceil(file.size / 1024) + 4096) + ' ] || { echo "设备剩余空间不足，旧安装包未更改。" >&2; exit 1; }\n' +
+        ': > ' + quote(temporary) + '\n');
+      const chunkSize = 48 * 1024;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+        let binary = '';
+        for (let index = 0; index < chunk.length; index++) binary += String.fromCharCode(chunk[index]);
+        const encoded = btoa(binary);
+        const end = offset + chunk.length;
+        await checked('set -eu\n' + guard +
+          '[ "$(wc -c < ' + quote(temporary) + ')" -eq ' + offset + ' ] || { echo "上传偏移不符，已停止。" >&2; exit 1; }\n' +
+          'printf %s ' + quote(encoded) + ' | base64 -d >> ' + quote(temporary) + '\n' +
+          '[ "$(wc -c < ' + quote(temporary) + ')" -eq ' + end + ' ] || { echo "上传字节数不符，已停止。" >&2; exit 1; }\n' +
+          'date +%s > ' + quote(lock + '/updated') + '\n');
+        progress('上传 ' + Math.round(end * 100 / bytes.length) + '%（' + end.toLocaleString() + ' / ' + bytes.length.toLocaleString() + ' 字节）');
+      }
+      progress('传输完成，正在校验完整安装包…');
+      const validation = await root(command('validate', temporary), 120000);
+      if (!validation.ok) throw new Error(validation.text || '安装包校验未通过。');
+      commitAttempted = true;
+      await checked('set -eu\n' + guard +
+        '[ "$(wc -c < ' + quote(temporary) + ')" -eq ' + file.size + ' ] || { echo "最终文件长度不符，旧包未更改。" >&2; exit 1; }\n' +
+        'chmod 600 ' + quote(temporary) + '\nmv -f ' + quote(temporary) + ' ' + quote(defaultPackage) + '\n' +
+        'rm -f ' + quote(lock + '/id') + ' ' + quote(lock + '/updated') + ' || true\nrmdir ' + quote(lock) + ' 2>/dev/null || true\n');
+      committed = true;
+      return validation.text;
+    } catch (error) {
+      if (commitAttempted) error.message = '提交结果未确认，请检查设备安装包后再操作。' + error.message;
+      else error.message = '原安装包已保留。' + error.message;
+      throw error;
+    } finally {
+      if (!committed) {
+        // Only this upload's temporary file and its own lease may be removed.
+        try {
+          await checked('rm -f ' + quote(temporary) + '\n' +
+            'if [ "$(cat ' + quote(lock + '/id') + ' 2>/dev/null)" = ' + quote(id) + ' ]; then\n' +
+            '  rm -f ' + quote(lock + '/id') + ' ' + quote(lock + '/updated') + '\n  rmdir ' + quote(lock) + ' 2>/dev/null || true\nfi\n');
+        } catch (_) { progress('上传清理回执未收到，请检查设备状态。'); }
+      }
+    }
+  }
+
+  function open() {
+    if (document.getElementById('ashbell-desktop-modal')) return;
+    const overlay = node('div'); overlay.id = 'ashbell-desktop-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:100100;background:#07121bd9;display:flex;align-items:center;justify-content:center;padding:18px;box-sizing:border-box';
+    const card = node('div'); card.style.cssText = 'width:min(580px,100%);max-height:88vh;overflow:auto;background:#142631;color:#eff8fc;border:1px solid #426678;border-radius:18px;padding:22px;box-sizing:border-box;font:14px/1.6 system-ui,sans-serif';
+    const title = node('h2', 'Ashbell · U60 Pro 桌面'); title.style.cssText = 'margin:0 0 8px;font-size:20px';
+    const intro = node('p', '管理个人桌面、开机自启与旧版资源。安装前自动备份，失败自动恢复；自启开关在下次设备重启时生效。');
+    intro.style.color = '#b6cbd8';
+    const label = node('label', '设备离线安装包 / 个人 release 下载目录');
+    const input = node('input'); input.value = defaultPackage; input.autocomplete = 'off'; input.spellcheck = false;
+    input.style.cssText = 'width:100%;box-sizing:border-box;margin:7px 0;padding:11px;border:1px solid #456477;border-radius:8px;background:#0b1b24;color:#fff;font:12px/1.5 monospace';
+    const hint = node('p', '可先「上传离线包」，校验成功后再点击安装或更新，全程无需 ADB。也可使用设备现有包或包含 ashbell-devui.tar.gz 的 HTTPS release 目录。');
+    hint.style.cssText = 'margin:4px 0 12px;color:#8eafc0;font-size:12px';
+    const status = node('pre', '点击「检查状态」读取当前版本与运行情况。');
+    status.style.cssText = 'background:#081820;border:1px solid #314b5d;border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-word;max-height:310px;overflow:auto;min-height:66px;font:12px/1.6 monospace';
+    status.setAttribute('aria-live', 'polite');
+    const actions = node('div'); actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px';
+    const buttons = [];
+    let operationBusy = false;
+    const setBusy = busy => {
+      operationBusy = busy;
+      buttons.forEach(element => { element.disabled = busy; });
+      input.disabled = busy;
+    };
+    const fileInput = node('input'); fileInput.type = 'file'; fileInput.accept = '.tar.gz,application/gzip'; fileInput.hidden = true;
+    const upload = node('button', '上传离线包'); upload.type = 'button';
+    upload.style.cssText = 'padding:9px 12px;border:1px solid #496b80;border-radius:8px;background:#126c86;color:#fff;font:inherit;cursor:pointer';
+    upload.onclick = () => { if (!operationBusy) fileInput.click(); };
+    fileInput.onchange = async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file || operationBusy) { fileInput.value = ''; return; }
+      setBusy(true);
+      try {
+        const validation = await uploadPackage(file, text => { status.textContent = text; });
+        input.value = defaultPackage;
+        status.textContent = '上传完成，安装包已校验并保存。\n' + validation + '\n请选择「安装 / 接管」或「更新」；尚未执行安装。';
+      } catch (error) { status.textContent = '上传未完成或未确认。\n' + error.message; }
+      finally { fileInput.value = ''; setBusy(false); }
+    };
+    actions.append(upload, fileInput); buttons.push(upload);
+    const definitions = [
+      ['检查状态 / 残留','status'], ['安装 / 接管','install'], ['更新','update'],
+      ['开启自启动','autostart on'], ['关闭自启动','autostart off'],
+      ['归档旧版残留','cleanup'], ['重启桌面','restart'], ['诊断日志','diagnostics'],
+      ['回退上一版','rollback'], ['卸载回原厂','uninstall']
+    ];
+    for (const [text, action] of definitions) {
+      const button = node('button', text); button.type = 'button';
+      button.style.cssText = 'padding:9px 12px;border:1px solid #496b80;border-radius:8px;background:#204254;color:#fff;font:inherit;cursor:pointer';
+      if (action === 'install') button.style.background = '#126c86';
+      if (action === 'uninstall') button.style.background = '#713e46';
+      button.onclick = async () => {
+        if (operationBusy) return;
+        let script;
+        try { script = command(action, input.value); } catch (error) { status.textContent = error.message; return; }
+        setBusy(true);
+        status.textContent = text + '执行中…';
+        try {
+          const result = await root(script);
+          status.textContent = (result.ok ? '完成\n' : '操作失败\n') + result.text;
+        } catch (error) { status.textContent = '未确认完成\n' + error.message; }
+        finally { setBusy(false); }
+      };
+      actions.append(button); buttons.push(button);
+    }
+    const detail = node('p', '归档会保留个人设置、自定义功能和流量数据。正常备份不算故障；Ashbell 的 start.sh 是正常启动器。诊断仅显示运行与日志摘要，不展示密码或令牌。');
+    detail.style.cssText = 'margin:12px 0 0;color:#8eafc0;font-size:12px';
+    const close = node('button', '关闭'); close.type = 'button'; close.style.cssText = 'margin-top:14px;padding:8px 13px;border:1px solid #496b80;border-radius:8px;background:transparent;color:#d5e4ec;font:inherit;cursor:pointer';
+    close.onclick = () => { if (!operationBusy) overlay.remove(); };
+    buttons.push(close);
+    card.append(title, intro, label, input, hint, status, actions, detail, close);
+    overlay.append(card); document.body.append(overlay);
+  }
+
+  function mount() {
+    if (document.getElementById('ashbell-desktop-button')) return true;
+    const slot = typeof collapseBtn_menu !== 'undefined' && collapseBtn_menu
+      ? collapseBtn_menu.nextElementSibling?.querySelector('.collapse_box') : document.querySelector('.collapse_box');
+    if (!slot) return false;
+    const button = node('button', 'Ashbell 桌面管理'); button.id = 'ashbell-desktop-button'; button.type = 'button';
+    button.onclick = open; slot.append(button); return true;
+  }
+  if (!mount()) {
+    let tries = 0;
+    const timer = setInterval(() => { if (mount() || ++tries >= 40) clearInterval(timer); }, 250);
+  }
+})();
+</script>
+<!-- [KANO_PLUGIN_END] Ashbell桌面管理 -->

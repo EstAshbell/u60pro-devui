@@ -61,3 +61,7 @@ drm_text
 /docs/WORKFLOW-LOCAL.md
 /docs/WORKFLOW-LOCAL-U60.md
 /docs/WORKFLOW-PRIVATE.md
+
+# Local deliverables and test capture files
+/artifacts/
+/release/

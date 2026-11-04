@@ -10,10 +10,31 @@
 #ifndef U60PRO_DATA_H
 #define U60PRO_DATA_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define DEVUI_SMS_MAX 32
 #define DEVUI_SMS_TEXT_MAX 16384
+#define DEVUI_WIFI_SSID_MAX 128
+#define DEVUI_WIFI_KEY_MAX 256
+#define DEVUI_SIM_TRAFFIC_MAX 16
+
+typedef struct {
+    char id[24];
+    int slot;
+    char iccid_tail[12];
+    char operator_name[48];
+    int active;
+    uint64_t today_rx_bytes, today_tx_bytes, today_bytes;
+    uint64_t cycle_rx_bytes, cycle_tx_bytes, cycle_bytes;
+    uint64_t lifetime_bytes;
+    int package_enabled;
+    uint64_t allowance_bytes;
+    int remaining_valid;
+    uint64_t remaining_bytes;
+    int reset_day;
+    int64_t cycle_start, cycle_end, last_seen;
+} devui_sim_traffic_t;
 
 typedef struct {
     int  valid;
@@ -51,8 +72,8 @@ typedef struct {
     struct { long id; char num[40], date[16], text[DEVUI_SMS_TEXT_MAX]; int unread; } sms[DEVUI_SMS_MAX];
     int  sms_n;
 
-    /* wifi (main SSID) */
-    char wifi_ssid[64], wifi_key[64], wifi_enc[24];
+    /* Legacy backend main (2.4G) profile; per-band display reads UCI separately. */
+    char wifi_ssid[DEVUI_WIFI_SSID_MAX + 1], wifi_key[DEVUI_WIFI_KEY_MAX + 1], wifi_enc[64];
     int  wifi_enabled;
 
     /* nfc tap-to-share */
@@ -63,6 +84,17 @@ typedef struct {
 
     /* traffic (bytes, bytes/s) */
     long rx_speed, tx_speed, rx_bytes, tx_bytes;
+
+    /* Shared fixed-offset timezone and persistent per-SIM traffic. */
+    int timezone_available;
+    int timezone_offset_minutes, timezone_dst_minutes, timezone_effective_minutes;
+    int timezone_clock_basis_available;
+    int timezone_system_offset_minutes, timezone_clock_adjust_minutes;
+    char timezone_label[24];
+    int sim_traffic_available;
+    char sim_traffic_active_id[24];
+    devui_sim_traffic_t sim_traffic[DEVUI_SIM_TRAFFIC_MAX];
+    int sim_traffic_n;
 
     /* qos (parsed from modem key.log by the backend) */
     int    qci;
@@ -83,6 +115,11 @@ int  data_backend_poll(uint32_t now_ms);
 /* Promote the latest live snapshot to the UI-visible snapshot. */
 int  data_backend_commit_latest(void);
 
+/* Drop transport/parser working memory while the panel is dark, then rebuild it
+ * and fetch a fresh snapshot on wake. The last committed UI snapshot is kept. */
+void data_backend_suspend(void);
+int  data_backend_resume(void);
+
 /* Close the transport socket. Safe to call during shutdown. */
 void data_backend_close(void);
 
@@ -91,5 +128,13 @@ int data_refresh(devui_data_t *d);
 
 /* Copy the latest live snapshot even if UI-visible refresh is paused. */
 int data_refresh_live(devui_data_t *d);
+
+/* Fetch the compact cached chart snapshot without restoring the suspended SSE
+ * transport or its large parser buffers. Intended for low-power dark-screen
+ * sampling; returns 1 only when a complete sample was received. */
+int data_chart_metrics(devui_data_t *d);
+
+/* Small synchronous loopback request used by fixed DevUI control actions. */
+int data_backend_request(const char *method, const char *path, char *body, size_t body_cap);
 
 #endif /* U60PRO_DATA_H */

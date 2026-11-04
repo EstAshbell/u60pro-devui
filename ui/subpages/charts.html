@@ -1,8 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
-<body class="{{THEME}}">
+<body class="{{THEME}} readable charts-page">
   {{STATUSBAR}}
+
+  <div class="subtop">
+    <a href="act:backfunc" class="subback">返回</a>
+    <span class="subname">网络与设备</span>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">网速
+      <span class="r"><span class="l1d">↓ {{RXSPEED}}</span><span class="l2d">↑ {{TXSPEED}}</span></span>
+    </div>
+    <div id="chart-net" class="chart"></div>
+  </div>
 
   <div class="card">
     <div class="ctitle">CPU
@@ -17,20 +29,14 @@
   </div>
 
   <div class="card">
-    <div class="ctitle">网速
-      <span class="r"><span class="l1d">↓ {{RXSPEED}}</span><span class="l2d">↑ {{TXSPEED}}</span></span>
-    </div>
-    <div id="chart-net" class="chart"></div>
-  </div>
-
-  <div class="card">
     <div class="ctitle">电池
       <span class="r"><span class="l2d">温度 {{BATTEMP}}°C</span><span class="l1d">{{BATPWRLBL}} {{BATPWR}}w</span></span>
     </div>
     <div id="chart-batt" class="chart"></div>
   </div>
 
+  {{CHARTINTERVALS}}
+
   <div class="pgpad"></div>
-  {{DOTS}}
 </body>
 </html>

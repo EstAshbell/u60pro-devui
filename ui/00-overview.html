@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
+<body class="{{THEME}}">
+  {{STATUSBAR}}
+  <div class="pagehead"><span class="pagebrand">Ashbell</span><span class="pagename">U60 Pro · 总览</span></div>
+
+  <a href="act:sub:clients.html" class="card overview-network">
+    <span class="overview-carrier">{{OPER}}</span><span class="overview-type">{{NETTYPE}}</span>
+    <span class="overview-line"><span class="overview-wan">移动网络 {{WAN}}</span><span class="r">连接设备 {{CLIENTS}} 台 · 查看</span></span>
+  </a>
+
+  <div class="card overview-speed">
+    <div class="overview-label">当前下载</div>
+    <div class="overview-rate">↓ {{RXSPEED}}</div>
+    <div class="overview-upload">上传 <b>↑ {{TXSPEED}}</b></div>
+  </div>
+
+  <div class="card overview-signal">
+    <div class="overview-label">信号质量<span class="r">{{BAND}} · PCI {{PCI}}</span></div>
+    <table class="overview-meters"><tr>
+      <td><span class="overview-label">RSRP</span><b>{{RSRP}}</b><span class="overview-unit">dBm</span>
+        <span class="overview-track"><span style="width:{{RSRP_W}}%"></span></span></td>
+      <td><span class="overview-label">SINR</span><b>{{SINR}}</b><span class="overview-unit">dB</span>
+        <span class="overview-track"><span class="overview-sinr" style="width:{{SINR_W}}%"></span></span></td>
+    </tr></table>
+  </div>
+
+  <a href="act:func:sim-traffic.html" class="card overview-traffic">
+    <div class="overview-label">本次连接流量<span class="r">按卡统计 ></span></div>
+    <table class="overview-totals"><tr>
+      <td><span>下载</span><b>{{RXBYTES}}</b></td>
+      <td><span>上传</span><b>{{TXBYTES}}</b></td>
+    </tr></table>
+  </a>
+
+  {{TOAST}}
+  <div class="pgpad"></div>
+  {{DOTS}}
+</body>
+</html>

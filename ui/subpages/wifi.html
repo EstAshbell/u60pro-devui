@@ -1,47 +1,62 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><link rel="stylesheet" href="style.css"></head>
-<body class="{{THEME}}">
+<body class="{{THEME}} readable wifi-page">
   {{STATUSBAR}}
-  <div class="subtop">
-    <a href="act:backfunc" class="subback">返回</a>
-    <span class="subname">WiFi</span>
+  <div class="subtop"><a href="act:backfunc" class="subback">返回</a><span class="subname">Wi-Fi</span></div>
+
+  <div class="card wifi-band-card">
+    <div class="title">5 GHz Wi-Fi<span class="r muted">优先显示</span></div>
+    <div class="wifi-field">
+      <div class="wifi-field-label">名称</div>
+      <div class="wifi-value" id="wifi-ssid5">{{SSID5_HTML}}</div>
+    </div>
+    <div class="wifi-field">
+      <div class="wifi-field-head"><span>密码</span><a href="act:revealkey" class="rev">{{KEYBTN}}</a></div>
+      <div class="wifi-value" id="wifi-key5">{{KEY5_HTML}}</div>
+    </div>
+    <div class="wifi-security">加密 <span class="wifi-security-value" id="wifi-enc5">{{ENC5_HTML}}</span></div>
   </div>
 
   <div class="card">
-    <div class="title">WiFi 分享</div>
-    <table>
-      <tr><td class="kv-l">名称</td><td class="val">{{SSID}}</td></tr>
-      <tr><td class="kv-l">密码 <a href="act:revealkey" class="rev">{{KEYBTN}}</a></td><td class="val">{{KEY}}</td></tr>
-      <tr><td class="kv-l">加密</td><td class="val">{{ENC}}</td></tr>
-    </table>
-    <div class="row">
-      <span class="lab">WiFi 总开关<span class="st">{{WIFISTATE}}</span></span>
-      <span class="ctrl"><a href="act:wifi" class="sw {{WIFICLASS}}"><span class="kn"></span></a></span>
-    </div>
-    <div class="row">
-      <span class="lab">2.4G 频段<span class="st">{{WIFI24STATE}}</span></span>
-      <span class="ctrl"><a href="act:wifi24" class="sw {{WIFI24CLASS}}"><span class="kn"></span></a></span>
-    </div>
-    <div class="row">
-      <span class="lab">5G 频段<span class="st">{{WIFI5STATE}}</span></span>
-      <span class="ctrl"><a href="act:wifi5" class="sw {{WIFI5CLASS}}"><span class="kn"></span></a></span>
-    </div>
-    <div class="row">
-      <span class="lab">WiFi 节能模式<span class="st">{{PSMSTATE}}</span></span>
-      <span class="ctrl"><a href="act:psm" class="sw {{PSMCLASS}}"><span class="kn"></span></a></span>
-    </div>
-    <div class="row">
+    <div class="title">网络控制</div>
+    <a href="act:wifi" class="row">
+      <span class="lab">Wi-Fi 总开关<span class="st">{{WIFISTATE}}</span></span>
+      <span class="ctrl"><span class="sw {{WIFICLASS}}"><span class="kn"></span></span></span>
+    </a>
+    <a href="act:wifi5" class="row">
+      <span class="lab">5 GHz 频段<span class="st">{{WIFI5STATE}}</span></span>
+      <span class="ctrl"><span class="sw {{WIFI5CLASS}}"><span class="kn"></span></span></span>
+    </a>
+    <a href="act:wifi24" class="row">
+      <span class="lab">2.4 GHz 频段<span class="st">{{WIFI24STATE}}</span></span>
+      <span class="ctrl"><span class="sw {{WIFI24CLASS}}"><span class="kn"></span></span></span>
+    </a>
+    <a href="act:psm" class="row">
+      <span class="lab">Wi-Fi 节能模式<span class="st">{{PSMSTATE}}</span></span>
+      <span class="ctrl"><span class="sw {{PSMCLASS}}"><span class="kn"></span></span></span>
+    </a>
+    <a href="act:nfc" class="row">
       <span class="lab">NFC 碰一碰<span class="st">{{NFCSTATE}}</span></span>
-      <span class="ctrl"><a href="act:nfc" class="sw {{NFCCLASS}}"><span class="kn"></span></a></span>
+      <span class="ctrl"><span class="sw {{NFCCLASS}}"><span class="kn"></span></span></span>
+    </a>
+    <p class="wifi-note">频段开关为本次运行状态，重启后按系统配置恢复。</p>
+  </div>
+
+  <div class="card wifi-band-card">
+    <div class="title">2.4 GHz Wi-Fi</div>
+    <div class="wifi-field">
+      <div class="wifi-field-label">名称</div>
+      <div class="wifi-value" id="wifi-ssid24">{{SSID24_HTML}}</div>
     </div>
+    <div class="wifi-field">
+      <div class="wifi-field-label">密码</div>
+      <div class="wifi-value" id="wifi-key24">{{KEY24_HTML}}</div>
+    </div>
+    <div class="wifi-security">加密 <span class="wifi-security-value" id="wifi-enc24">{{ENC24_HTML}}</span></div>
   </div>
 
-  <div class="card">
-    <div class="title">已连接设备 <span class="r muted">{{CLIENTS}} 台</span></div>
-    {{CLIENTLIST}}
-  </div>
-
+  <div class="card"><div class="title">已连接设备<span class="r muted">{{CLIENTS}} 台</span></div>{{CLIENTLIST}}</div>
   <div class="card">
     <div class="title">DHCP</div>
     <table>
@@ -50,7 +65,7 @@
       <tr><td class="kv-l">租期</td><td class="val">{{DHCP_LEASE}}</td></tr>
     </table>
   </div>
-
+  {{TOAST}}
   <div class="pgpad"></div>
 </body>
 </html>

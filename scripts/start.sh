@@ -6,16 +6,16 @@
 # old nohup-based launch path for manual installs and older plugins.
 #
 # SPDX-License-Identifier: MIT
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
 DEVUI_DIR=/data/plugins/u60pro-devui
 DATAD_DIR=/data/plugins/zwrt-datad
 UI_DIR=$DEVUI_DIR/ui
 LEGACY_UI_DIR=/data/ui
 DEVUI_BIN=$DEVUI_DIR/u60pro-devui
 DATAD_BIN=$DATAD_DIR/zwrt-datad
-DATAD_LAN_PORT=${DATAD_LAN_PORT:-9461}
-DATAD_TOKEN_FILE=${DATAD_TOKEN_FILE:-$DATAD_DIR/auth.token}
-DATAD_MODEM_REMOTE_STREAM=${DATAD_MODEM_REMOTE_STREAM:-1}
-DATAD_MODEM_REMOTE_STALE_SEC=${DATAD_MODEM_REMOTE_STALE_SEC:-6}
+# This distribution pins zwrt-datad-remix 0.6.7-remix.5, whose API includes
+# per-SIM traffic, timezone and normalized neighbor cells. Bind only loopback.
 MODE="${1:-legacy}"
 
 mkdir -p "$DEVUI_DIR" "$DATAD_DIR" "$UI_DIR"
@@ -90,10 +90,8 @@ start_datad_legacy() {
     [ -x "$DATAD_BIN" ] || return 0
     pidof zwrt-datad >/dev/null 2>&1 && return 0
     killall -9 u60-datad 2>/dev/null
-    nohup env DATAD_MODEM_REMOTE_STREAM="$DATAD_MODEM_REMOTE_STREAM" \
-        DATAD_MODEM_REMOTE_STALE_SEC="$DATAD_MODEM_REMOTE_STALE_SEC" \
-        "$DATAD_BIN" -i 1000 --lan-port "$DATAD_LAN_PORT" \
-        --auth-token-file "$DATAD_TOKEN_FILE" >/tmp/zwrt-datad.log 2>&1 </dev/null &
+    nohup "$DATAD_BIN" -i 1000 -b 127.0.0.1 -p 9460 \
+        >/dev/null 2>&1 </dev/null &
     sleep 1
 }
 
