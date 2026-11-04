@@ -42,7 +42,7 @@ def build(args):
         raise ValueError("datad version manifest is missing its version or expected asset name")
     manifest["datad"] = datad
     manifest["distribution"] = "ashbell"
-    manifest["manager"] = {"version": "1.1.2", "asset": "ashbell-devui.tar.gz"}
+    manifest["manager"] = {"version": "1.1.3", "asset": "ashbell-devui.tar.gz"}
     payload = {
         "version.json": (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode(),
         "u60pro-devui-aarch64": elf(args.devui),

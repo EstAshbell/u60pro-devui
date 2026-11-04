@@ -26,8 +26,8 @@ ARCHIVE_TXN=
 ARCHIVE_SOURCE=
 HOOK='[ -x /data/plugins/u60pro-devui/start.sh ] && sh /data/plugins/u60pro-devui/start.sh legacy >/tmp/u60pro-boot.log 2>&1 & # ashbell_devui'
 ASSETS='version.json u60pro-devui-aarch64 zwrt-datad-aarch64 ui.tar.gz start.sh ashbell-devui.sh LICENSE NOTICE.md'
-DESKTOP_HOOK_RE='ashbell_devui|/data/plugins/u60pro-devui/(start(-devui)?\.sh|u60pro-devui)([[:space:];&]|$)|/etc/init.d/u60pro-devui([[:space:];&]|$)|/data/u60pro/start\.sh|#[[:space:]]*u60pro_devui(_devui)?[[:space:]]*$'
-BACKEND_HOOK_RE='u60pro_devui_datad|/data/plugins/zwrt-datad/(start(-datad)?\.sh|zwrt-datad)([[:space:];&]|$)|/etc/init.d/(zwrt-datad|u60-datad)([[:space:];&]|$)'
+DESKTOP_HOOK_RE='ashbell_devui|/data/plugins/u60pro-devui/(start(-devui)?[.]sh|u60pro-devui)([[:space:];&]|$)|/etc/init.d/u60pro-devui([[:space:];&]|$)|/data/u60pro/start[.]sh|#[[:space:]]*u60pro_devui(_devui)?[[:space:]]*$'
+BACKEND_HOOK_RE='u60pro_devui_datad|/data/plugins/zwrt-datad/(start(-datad)?[.]sh|zwrt-datad)([[:space:];&]|$)|/etc/init.d/(zwrt-datad|u60-datad)([[:space:];&]|$)'
 
 say() { printf '%s\n' "$*"; }
 fail() { say "错误：$*" >&2; exit 1; }
